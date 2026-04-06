@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo Interaktif — Arkom Modul 2</title>
+<style>
+
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
+  :root {
+    --navy:      #1A2A4A;
+    --navy-mid:  #1E3A5F;
+    --teal:      #0D7A8A;
+    --teal-lt:   #12A0B5;
+    --gold:      #F0A500;
+    --off-white: #F0F4F8;
+    --lt-gray:   #D0DBE8;
+    --muted:     #6B7FA3;
+    --white:     #FFFFFF;
+    --font-body: 'Plus Jakarta Sans', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --radius:    10px;
+    --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-body); background: var(--off-white); color: var(--navy); min-height: 100vh; }
+
+  header {
+    background: var(--navy); padding: 16px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 16px rgba(26,42,74,.25);
+  }
+  .h-left { display: flex; align-items: center; gap: 14px; }
+  .h-icon { width: 38px; height: 38px; background: var(--teal); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .h-title { color: var(--white); font-size: 16px; font-weight: 600; line-height: 1.2; }
+  .h-sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+  main { max-width: 700px; margin: 0 auto; padding: 28px 24px 60px; }
+
+  .intro { font-size: 15px; font-weight: 500; color: var(--navy); margin-bottom: 6px; }
+  .hint  { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+
+  .card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--lt-gray); padding: 24px; margin-bottom: 16px; animation: fadeUp .25s ease; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  .card-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--off-white); }
+
+  /* HISTORY CARD */
+  .hist-card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--lt-gray); padding: 20px 24px; margin-bottom: 14px; animation: fadeUp .25s ease; }
+  .hist-no   { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 4px; }
+  .hist-nama { font-size: 18px; font-weight: 700; color: var(--navy); margin-bottom: 14px; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px; }
+  @media (max-width: 540px) { .two-col { grid-template-columns: 1fr; } }
+  .info-row { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .info-row b { color: var(--navy); }
+  .info-row code { font-family: var(--font-mono); background: var(--off-white); padding: 1px 6px; border-radius: 3px; font-size: 12px; }
+
+  /* BINER ROW */
+  .biner-row {
+    font-family: var(--font-mono); font-size: 15px;
+    background: #F0F4FF; border-radius: var(--radius-sm);
+    padding: 10px 14px; margin: 10px 0; letter-spacing: 2px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .bit-buang { color: #cc0000; font-weight: 700; }
+  .bit-simpan { color: #0055cc; font-weight: 700; }
+  .bit-note { color: var(--muted); font-size: 12px; font-family: var(--font-body); letter-spacing: 0; }
+
+  /* RESULT BADGES */
+  .result-ok {
+    background: #E8F5E9; border-left: 4px solid #2E7D32;
+    border-radius: var(--radius-sm); padding: 10px 16px;
+    color: #1B5E20; font-weight: 600; font-size: 14px; margin-top: 8px;
+  }
+  .result-error {
+    background: #FFEBEE; border-left: 4px solid #C62828;
+    border-radius: var(--radius-sm); padding: 14px 18px; margin-top: 10px;
+  }
+  .result-error h4 { color: #B71C1C; margin-bottom: 6px; font-size: 15px; }
+  .result-error p  { color: #7F0000; font-size: 14px; line-height: 1.5; }
+
+  /* INPUT AREA */
+  .input-card { background: var(--white); border-radius: var(--radius); border: 2px solid var(--teal); padding: 24px; margin-bottom: 16px; }
+  .input-label { font-size: 18px; font-weight: 600; color: var(--navy); margin-bottom: 4px; }
+  .input-sub { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .field input {
+    width: 100%; padding: 11px 14px; font-size: 20px;
+    font-family: var(--font-mono); font-weight: 600;
+    border: 1.5px solid var(--lt-gray); border-radius: var(--radius-sm);
+    background: var(--off-white); color: var(--navy); outline: none;
+    transition: border-color .15s;
+  }
+  .field input:focus { border-color: var(--teal-lt); }
+
+  /* PROGRESS */
+  .progress-bar { display: flex; gap: 8px; margin-bottom: 18px; }
+  .prog-dot {
+    flex: 1; height: 6px; border-radius: 3px;
+    background: var(--lt-gray); transition: background .3s;
+  }
+  .prog-dot.done    { background: var(--teal); }
+  .prog-dot.current { background: var(--gold); }
+  .prog-dot.error   { background: #E24B4A; }
+
+  /* BUTTONS */
+  .btn { width: 100%; padding: 12px; font-size: 14px; font-weight: 600; font-family: var(--font-body); border: none; border-radius: var(--radius-sm); cursor: pointer; transition: all .15s; margin-top: 6px; }
+  .btn-primary { background: var(--navy); color: var(--white); }
+  .btn-primary:hover { background: var(--navy-mid); }
+  .btn-primary:active { transform: scale(.98); }
+  .btn-reset { background: var(--white); color: var(--navy); border: 1.5px solid var(--lt-gray); }
+  .btn-reset:hover { background: var(--off-white); }
+
+  /* SUMMARY */
+  .summary-ok {
+    background: #E8F5E9; border: 2px solid #A5D6A7;
+    border-radius: var(--radius); padding: 20px 24px; margin-bottom: 16px;
+    text-align: center; animation: fadeUp .3s ease;
+  }
+  .summary-ok .sum-icon { font-size: 32px; margin-bottom: 8px; }
+  .summary-ok .sum-text { font-size: 16px; font-weight: 600; color: #1B5E20; }
+  .summary-ok .sum-total { font-family: var(--font-mono); font-size: 28px; font-weight: 700; color: #1B5E20; margin-top: 6px; }
+
+  .summary-err {
+    background: #FFEBEE; border: 2px solid #EF9A9A;
+    border-radius: var(--radius); padding: 20px 24px; margin-bottom: 16px;
+    animation: fadeUp .3s ease;
+  }
+  .summary-err .sum-icon { font-size: 32px; margin-bottom: 8px; }
+  .summary-err h3 { color: #B71C1C; font-size: 18px; margin-bottom: 6px; }
+  .summary-err p  { color: #7F0000; font-size: 14px; line-height: 1.5; }
+
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 50px; padding-top: 18px; border-top: 1px solid var(--lt-gray); }
+
+.tab-nav {
+  display: flex;
+  background: var(--navy-mid);
+  border-bottom: 2px solid rgba(255,255,255,.08);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+.tab-btn {
+  background: none; border: none;
+  color: var(--muted);
+  padding: 10px 22px; font-size: 12px; font-weight: 600;
+  font-family: var(--font-body); cursor: pointer;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap; transition: all .2s; letter-spacing: .02em;
+}
+.tab-btn:hover  { color: var(--white); }
+.tab-btn.active { color: var(--teal-lt); border-bottom-color: var(--teal-lt); }
+.tab-section { display: none; flex: 1; flex-direction: column; min-height: 0; overflow-y: auto; }
+.tab-section#sec-ieee754 { overflow: hidden; }
+.tab-section.active { display: flex; flex: 1; flex-direction: column; min-height: 0; overflow-y: auto; }
+.tab-section.active#sec-ieee754 { overflow: hidden; }
+body { font-family: var(--font-body); background: var(--off-white); color: var(--navy); min-height: 100vh; }
+
+  
+  
+  
+  
+  
+
+  main { max-width: 760px; margin: 0 auto; padding: 28px 24px 60px; }
+
+  .card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--lt-gray); padding: 24px; margin-bottom: 20px; }
+  .card-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--off-white); }
+
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; }
+  .field input { width: 100%; padding: 10px 14px; font-size: 18px; font-family: var(--font-mono); border: 1.5px solid var(--lt-gray); border-radius: var(--radius-sm); background: var(--off-white); color: var(--navy); outline: none; transition: border-color .15s; }
+  .field input:focus { border-color: var(--teal-lt); }
+
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+  .ieee-left .btn-row { flex-wrap: nowrap; gap: 6px; }
+  .ieee-left .btn-row .btn { flex: 1; padding: 9px 6px; font-size: 12px; min-width: 0; }
+  .btn { padding: 10px 18px; font-size: 13px; font-weight: 600; font-family: var(--font-body); border: none; border-radius: var(--radius-sm); cursor: pointer; transition: all .15s; }
+  .btn-primary { background: var(--navy); color: var(--white); }
+  .btn-primary:hover { background: var(--navy-mid); }
+  .btn-primary:active { transform: scale(.98); }
+  .btn-primary:disabled { background: var(--muted); cursor: not-allowed; }
+  .btn-secondary { background: var(--white); color: var(--navy); border: 1.5px solid var(--lt-gray); }
+  .btn-secondary:hover { background: var(--off-white); }
+  .btn-secondary:disabled { color: var(--muted); cursor: not-allowed; }
+
+  .hint { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+  .step-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .step-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 16px; border-radius: var(--radius-sm);
+    border: 1px solid var(--lt-gray);
+    animation: fadeUp .25s ease;
+  }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+  .step-item.active { border-color: var(--teal); background: #EAF6F8; }
+  .step-item.done   { border-color: var(--lt-gray); background: var(--off-white); }
+
+  .step-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--navy); color: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+    font-family: var(--font-mono);
+  }
+  .step-num.active { background: var(--teal); }
+  .step-op { flex: 1; font-family: var(--font-mono); font-size: 14px; color: var(--navy-mid); }
+  .step-op b { color: var(--navy); }
+
+  .bit-badge { padding: 3px 14px; border-radius: 4px; font-weight: 700; font-size: 16px; font-family: var(--font-mono); flex-shrink: 0; }
+  .bit-0 { background: #E3F2FD; color: #0D47A1; }
+  .bit-1 { background: #E8F5E9; color: #1B5E20; }
+  .step-sisa { font-size: 12px; color: var(--muted); min-width: 90px; text-align: right; font-family: var(--font-mono); }
+
+  .result-biner {
+    background: var(--navy); border-radius: var(--radius);
+    padding: 24px; text-align: center; margin-bottom: 20px;
+    animation: fadeUp .3s ease;
+  }
+  .rb-label { color: var(--muted); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 10px; }
+  .rb-nilai { font-family: var(--font-mono); font-size: 28px; font-weight: 700; color: #7ECFFF; letter-spacing: 4px; word-break: break-all; }
+  .rb-seq   { color: var(--muted); font-size: 12px; margin-top: 10px; font-family: var(--font-mono); }
+
+  .norm-box { background: #FFF8E1; border-left: 4px solid var(--gold); border-radius: var(--radius-sm); padding: 16px 20px; margin-bottom: 20px; animation: fadeUp .3s ease; }
+  .norm-box h4 { color: #E65100; font-size: 13px; margin-bottom: 10px; font-weight: 600; }
+  .norm-box .norm-eq { font-family: var(--font-mono); font-size: 16px; color: var(--navy); margin-bottom: 6px; }
+  .norm-box small { color: var(--muted); font-size: 12px; }
+
+  .ieee-card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--lt-gray); padding: 24px; margin-bottom: 20px; animation: fadeUp .3s ease; }
+  .ieee-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+  .ieee-lbl { width: 88px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; flex-shrink: 0; }
+  .ieee-sign { background: #FCE4EC; color: #C62828; padding: 6px 16px; border-radius: 4px; font-weight: 700; font-size: 16px; font-family: var(--font-mono); }
+  .ieee-exp  { background: #E8EAF6; color: #283593; padding: 6px 10px; border-radius: 4px; font-weight: 700; letter-spacing: 3px; font-size: 14px; font-family: var(--font-mono); }
+  .ieee-mant { background: #E8F5E9; color: #1B5E20; padding: 6px 8px; border-radius: 4px; font-weight: 700; letter-spacing: 1px; font-size: 12px; font-family: var(--font-mono); word-break: break-all; }
+  .ieee-note { color: var(--muted); font-size: 12px; font-family: var(--font-mono); }
+  .ieee-final {
+    background: var(--navy); color: #7ECFFF;
+    padding: 14px 18px; border-radius: var(--radius-sm);
+    font-family: var(--font-mono); font-size: 14px;
+    letter-spacing: 3px; text-align: center; margin-top: 10px;
+    word-break: break-all; line-height: 1.8;
+  }
+/* ── LAYOUT: full-height flex column ── */
+  .page {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 12px 18px 10px;
+    gap: 10px;
+  }
+
+  /* ── HEADER ── */
+  
+  
+  
+  
+  
+
+  /* ── MAIN CONTENT: two columns ── */
+  .content {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1.6fr;
+    gap: 12px;
+    min-height: 0;
+  }
+
+  /* ── LEFT COLUMN ── */
+  .left-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* SWATCH */
+  .swatch {
+    flex-shrink: 0;
+    height: 80px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 22px; font-weight: 700;
+    letter-spacing: 3px;
+    border: 1px solid rgba(255,255,255,.1);
+    transition: background .08s, color .08s;
+  }
+
+  /* SLIDERS */
+  .sliders { display: flex; flex-direction: column; gap: 8px; }
+  .slider-row { display: flex; align-items: center; gap: 8px; }
+  .slider-row label {
+    width: 20px; font-size: 13px; font-weight: 600;
+    flex-shrink: 0; text-align: center;
+  }
+  .slider-row input[type=range] {
+    flex: 1; height: 5px; border-radius: 3px;
+    outline: none; border: none; cursor: pointer;
+  }
+  input.r { accent-color: #E74C3C; }
+  input.g { accent-color: #27AE60; }
+  input.b { accent-color: #2980B9; }
+  .slider-val {
+    width: 34px; text-align: right;
+    font-family: var(--font-mono); font-size: 12px; color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  /* HINT */
+  .hint { font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+  /* ── RIGHT COLUMN ── */
+  .right-col { display: flex; flex-direction: column; gap: 10px; }
+
+  /* COMPONENT CARDS */
+  .comp-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .comp-card {
+    background: var(--navy-mid); border-radius: 8px;
+    padding: 10px 8px; text-align: center;
+    border: 1px solid rgba(255,255,255,.07);
+  }
+  .comp-label { font-size: 10px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 5px; }
+  .comp-dec   { font-size: 22px; font-weight: 700; font-family: var(--font-mono); margin-bottom: 2px; }
+  .comp-hex   { font-family: var(--font-mono); font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .comp-bin   { font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+
+  /* PRESET COLORS */
+  .section-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 6px; }
+  .preset-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: 6px; }
+  .preset-swatch {
+    border-radius: 7px; padding: 9px 4px;
+    text-align: center; font-size: 9px; font-weight: 600;
+    line-height: 1.7; border: 1px solid rgba(0,0,0,.12);
+    cursor: pointer; font-family: var(--font-mono);
+    transition: transform .12s, box-shadow .12s;
+  }
+  .preset-swatch:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+  .preset-name { font-family: var(--font-body); font-size: 9px; font-weight: 400; opacity: .85; display: block; }
+
+  /* ── FOOTER ── */
+
+  /* ── IEEE 754 SPLIT LAYOUT ── */
+  .ieee-split {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 12px;
+    min-height: 0;
+    padding: 12px 16px;
+    overflow: hidden;
+  }
+  .ieee-left {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .ieee-step-card {
+    flex: 1;
+    min-height: 0;
+    display: flex !important;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .ieee-step-card .step-list {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+  .ieee-right {
+    min-height: 0;
+    overflow: hidden;
+  }
+  .ieee-right-inner {
+    height: 100%;
+    overflow-y: auto;
+    background: var(--white);
+    border-radius: var(--radius);
+    border: 1px solid var(--lt-gray);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .ieee-placeholder {
+    margin: auto;
+    text-align: center;
+    padding: 40px 20px;
+    opacity: 0.7;
+  }
+  /* Hapus margin-bottom pada result items agar muat */
+  #result-area .result-biner { margin-bottom: 14px; }
+  #result-area .norm-box     { margin-bottom: 14px; }
+  #result-area .ieee-card    { margin-bottom: 0; }
+
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="h-left">
+      <div class="h-icon">💻</div>
+      <div>
+        <div class="h-title">Demo Interaktif — Arsitektur dan Organisasi Komputer</div>
+        <div class="h-sub">Modul 2 &nbsp;·&nbsp; Sistem Bilangan</div>
+      </div>
+    </div>
+    <img id="main-logo" alt="I·TeCH"
+      style="height:32px;object-fit:contain;background:white;border-radius:6px;padding:3px 8px;">
+  </header>
+
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="showTab(this,'overflow')">🖥️&nbsp; Overflow — Kasir</button>
+    <button class="tab-btn"        onclick="showTab(this,'ieee754')">🔢&nbsp; IEEE 754</button>
+    <button class="tab-btn"        onclick="showTab(this,'heksa')">🎨&nbsp; Heksadesimal RGB</button>
+  </div>
+
+  <div class="tab-section active" id="sec-overflow"><main>
+  <p class="intro">Sistem kasir menyimpan harga dalam tipe data <code style="font-family:var(--font-mono);background:var(--lt-gray);padding:1px 6px;border-radius:3px;">char</code> (8 bit, nilai 0–255). Masukkan harga untuk setiap barang dan lihat apa yang terjadi.</p>
+  <p class="hint">💡 Coba masukkan nilai di atas 255 pada salah satu barang untuk melihat overflow.</p>
+
+  <!-- PROGRESS -->
+  <div class="progress-bar" id="progress-bar"></div>
+
+  <!-- HISTORY -->
+  <div id="history-area"></div>
+
+  <!-- INPUT AREA -->
+  <div id="input-area"></div>
+
+  <!-- SUMMARY -->
+  <div id="summary-area"></div>
+</main></div>
+  <div class="tab-section" id="sec-ieee754">
+  <div class="ieee-split">
+    <div class="ieee-left">
+      <div class="card card-input">
+        <div class="card-title">Masukkan bilangan pecahan desimal</div>
+        <div class="field">
+          <label>Nilai (antara 0 dan 1, contoh: 0.15625 atau 0.375)</label>
+          <input type="text" id="nilai" inputmode="decimal" value="0.15625" placeholder="contoh: 0.15625">
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-mulai" onclick="mulai()">&#9654; Mulai</button>
+          <button class="btn btn-secondary" id="btn-next" onclick="nextStep()" disabled>&#9193; Langkah</button>
+          <button class="btn btn-secondary" id="btn-all" onclick="showAll()" disabled>&#9197; Semua</button>
+          <button class="btn btn-secondary" onclick="doReset()">&#8635; Reset</button>
+        </div>
+      </div>
+      <div class="card ieee-step-card" id="step-card" style="display:none;">
+        <div class="card-title">Langkah-langkah konversi (&times; 2)</div>
+        <div class="hint">Klik <b>Langkah</b> untuk maju satu langkah, atau <b>Semua</b> untuk langsung selesai.</div>
+        <div class="step-list" id="step-list"></div>
+      </div>
+    </div>
+    <div class="ieee-right">
+      <div class="ieee-right-inner" id="result-area">
+        <div class="ieee-placeholder" id="ieee-placeholder">
+          <div style="font-size:44px;margin-bottom:10px;">&#128210;</div>
+          <div style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:6px;">Hasil IEEE 754</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6;">Masukkan nilai dan klik <b>Mulai</b><br>untuk melihat hasil konversi di sini.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+  <div class="tab-section" id="sec-heksa"><div class="page">
+
+  <!-- HEADER -->
+  
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- LEFT: swatch + sliders -->
+    <div class="left-col">
+      <div class="swatch" id="swatch">#FF5733</div>
+      <div class="sliders">
+        <div class="slider-row">
+          <label style="color:#E74C3C">R</label>
+          <input type="range" class="r" id="sr" min="0" max="255" value="255" oninput="update()">
+          <span class="slider-val" id="vr">255</span>
+        </div>
+        <div class="slider-row">
+          <label style="color:#27AE60">G</label>
+          <input type="range" class="g" id="sg" min="0" max="255" value="87" oninput="update()">
+          <span class="slider-val" id="vg">87</span>
+        </div>
+        <div class="slider-row">
+          <label style="color:#5B9BD5">B</label>
+          <input type="range" class="b" id="sb" min="0" max="255" value="51" oninput="update()">
+          <span class="slider-val" id="vb">51</span>
+        </div>
+      </div>
+      <p class="hint">💡 Geser slider R, G, B dan perhatikan bagaimana nilai desimal, heksadesimal, dan biner berubah.</p>
+    </div>
+
+    <!-- RIGHT: components + presets -->
+    <div class="right-col">
+      <div>
+        <div class="section-label">Representasi per komponen (masing-masing 8 bit)</div>
+        <div class="comp-grid">
+          <div class="comp-card">
+            <div class="comp-label">Red</div>
+            <div class="comp-dec" id="cr" style="color:#FF6B6B">255</div>
+            <div class="comp-hex" id="hr" style="color:#FF6B6B">FF<sub>16</sub></div>
+            <div class="comp-bin" id="br">11111111</div>
+          </div>
+          <div class="comp-card">
+            <div class="comp-label">Green</div>
+            <div class="comp-dec" id="cg" style="color:#6BCB77">87</div>
+            <div class="comp-hex" id="hg" style="color:#6BCB77">57<sub>16</sub></div>
+            <div class="comp-bin" id="bg">01010111</div>
+          </div>
+          <div class="comp-card">
+            <div class="comp-label">Blue</div>
+            <div class="comp-dec" id="cb" style="color:#6BB5FF">51</div>
+            <div class="comp-hex" id="hb" style="color:#6BB5FF">33<sub>16</sub></div>
+            <div class="comp-bin" id="bb">00110011</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Contoh warna populer — klik untuk pilih</div>
+        <div class="preset-grid" id="presets"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  
+
+</div></div>
+
+  <footer>
+    Arismunandar, M.T.I. &nbsp;·&nbsp; Arsitektur dan Organisasi Komputer &nbsp;·&nbsp; STTI NIIT Jakarta
+  </footer>
+
+</div>
+<script>var LOGO_B64 = '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';
+document.getElementById('main-logo').src = 'data:image/jpeg;base64,' + LOGO_B64;
+function showTab(btn, id) {
+  document.querySelectorAll('.tab-section').forEach(function(s) { s.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.getElementById('sec-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ── OVERFLOW ── */
+var barangList = ['Pulpen', 'Buku tulis', 'Kopi sachet'];
+var riwayat    = [];
+var langkah    = 0;
+var overflowTerjadi = false;
+
+function bin8plus(n) {
+  var s = n.toString(2);
+  return s;
+}
+
+function renderProgress() {
+  var bar = document.getElementById('progress-bar');
+  bar.innerHTML = '';
+  for (var i = 0; i < barangList.length; i++) {
+    var dot = document.createElement('div');
+    dot.className = 'prog-dot';
+    if (i < langkah && !overflowTerjadi) dot.classList.add('done');
+    else if (i < langkah && overflowTerjadi && i === langkah - 1) dot.classList.add('error');
+    else if (i < langkah) dot.classList.add('done');
+    else if (i === langkah && !overflowTerjadi) dot.classList.add('current');
+    if (overflowTerjadi && i === riwayat.length - 1) {
+      dot.classList.remove('done');
+      dot.classList.add('error');
+    }
+    bar.appendChild(dot);
+  }
+}
+
+function renderHistory() {
+  var area = document.getElementById('history-area');
+  area.innerHTML = '';
+  riwayat.forEach(function(item) {
+    var div = document.createElement('div');
+    div.className = 'hist-card';
+
+    var binerHtml = '';
+    var binerRaw = item.biner;
+    if (item.overflow && binerRaw.length > 8) {
+      var dibuang   = binerRaw.slice(0, binerRaw.length - 8);
+      var tersimpan = binerRaw.slice(-8);
+      binerHtml =
+        '<span class="bit-buang">' + dibuang + '</span>' +
+        '<span class="bit-simpan">' + tersimpan + '</span>' +
+        '<span class="bit-note">(' + binerRaw.length + ' bit — merah dibuang)</span>';
+    } else {
+      var padded = binerRaw.padStart(8, '0');
+      binerHtml = '<span class="bit-simpan">' + padded + '</span>' +
+        '<span class="bit-note">(' + binerRaw.length + ' bit)</span>';
+    }
+
+    var resultHtml = '';
+    if (item.overflow) {
+      resultHtml =
+        '<div class="result-error">' +
+        '<h4>&#9888; OVERFLOW!</h4>' +
+        '<p>Input <strong>' + item.harga + '</strong> melebihi kapasitas char (maks 255).<br>' +
+        'Bit ke-' + item.biner.length + ' dibuang &rarr; tersimpan sebagai <strong>' + item.hasil + '</strong></p>' +
+        '</div>';
+    } else {
+      resultHtml = '<div class="result-ok">&#10003; Aman &mdash; Tersimpan sebagai ' + item.harga + '</div>';
+    }
+
+    div.innerHTML =
+      '<div class="hist-no">Barang ' + item.no + '</div>' +
+      '<div class="hist-nama">' + item.nama + '</div>' +
+      '<div class="two-col">' +
+        '<div>' +
+          '<div class="info-row">Input: <b>' + item.harga + '</b></div>' +
+          '<div class="info-row">Tipe data: <code>char</code> (8 bit, maks = 255)</div>' +
+        '</div>' +
+        '<div>' +
+          '<div class="info-row">Representasi biner:</div>' +
+          '<div class="biner-row">' + binerHtml + '</div>' +
+        '</div>' +
+      '</div>' +
+      resultHtml;
+
+    area.appendChild(div);
+  });
+}
+
+function renderInput() {
+  var area = document.getElementById('input-area');
+  area.innerHTML = '';
+  if (overflowTerjadi || langkah >= barangList.length) return;
+
+  var nama = barangList[langkah];
+  var div = document.createElement('div');
+  div.className = 'input-card';
+  div.innerHTML =
+    '<div class="input-label">Barang ' + (langkah + 1) + ' dari ' + barangList.length + ': ' + nama + '</div>' +
+    '<div class="input-sub">Masukkan harga (coba nilai di atas 255 untuk melihat overflow)</div>' +
+    '<div class="field">' +
+      '<label>Harga</label>' +
+      '<input type="number" id="harga-input" min="0" max="99999" value="0" placeholder="0">' +
+    '</div>' +
+    '<button class="btn btn-primary" onclick="simpan()">&#128190; Simpan ke Memori</button>';
+  area.appendChild(div);
+
+  setTimeout(function() {
+    var inp = document.getElementById('harga-input');
+    if (inp) {
+      inp.focus();
+      inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') simpan(); });
+    }
+  }, 50);
+}
+
+function renderSummary() {
+  var area = document.getElementById('summary-area');
+  area.innerHTML = '';
+
+  if (overflowTerjadi) {
+    var div = document.createElement('div');
+    div.className = 'summary-err';
+    div.innerHTML =
+      '<div class="sum-icon">&#128680;</div>' +
+      '<h3>Program berhenti — data tidak bisa disimpan dengan benar.</h3>' +
+      '<p>Tipe data <code style="font-family:var(--font-mono)">char</code> hanya mampu menyimpan nilai 0–255. ' +
+      'Ketika nilai melebihi 255, bit-bit yang tidak muat akan dibuang dan data yang tersimpan menjadi <strong>salah</strong>. ' +
+      'Solusi: gunakan tipe data yang lebih besar seperti <code style="font-family:var(--font-mono)">int</code> (32 bit) atau <code style="font-family:var(--font-mono)">short</code> (16 bit).</p>';
+    area.appendChild(div);
+    var btn = document.createElement('button');
+    btn.className = 'btn btn-reset';
+    btn.innerHTML = '&#8635; Ulangi Demo';
+    btn.onclick = resetDemo;
+    area.appendChild(btn);
+
+  } else if (langkah >= barangList.length) {
+    var total = riwayat.reduce(function(acc, i) { return acc + i.hasil; }, 0);
+    var div = document.createElement('div');
+    div.className = 'summary-ok';
+    div.innerHTML =
+      '<div class="sum-icon">&#9989;</div>' +
+      '<div class="sum-text">Semua barang tersimpan dengan aman!</div>' +
+      '<div class="sum-total">Total: ' + total + '</div>';
+    area.appendChild(div);
+    var btn = document.createElement('button');
+    btn.className = 'btn btn-reset';
+    btn.innerHTML = '&#8635; Ulangi Demo';
+    btn.onclick = resetDemo;
+    area.appendChild(btn);
+  }
+}
+
+function simpan() {
+  var inp = document.getElementById('harga-input');
+  if (!inp) return;
+  var harga = parseInt(inp.value) || 0;
+  if (harga < 0) harga = 0;
+
+  var overflow = harga > 255;
+  var hasil    = harga % 256;
+  var biner    = harga.toString(2);
+
+  riwayat.push({
+    no:       langkah + 1,
+    nama:     barangList[langkah],
+    harga:    harga,
+    hasil:    hasil,
+    biner:    biner,
+    overflow: overflow,
+  });
+
+  if (overflow) {
+    overflowTerjadi = true;
+  } else {
+    langkah++;
+  }
+
+  render();
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+}
+
+function resetDemo() {
+  riwayat = [];
+  langkah = 0;
+  overflowTerjadi = false;
+  render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function render() {
+  renderProgress();
+  renderHistory();
+  renderInput();
+  renderSummary();
+}
+
+/* init deferred */
+/* ── IEEE 754 ── */
+var langkahData   = [];
+var langkahTampil = 0;
+var sudahSelesai  = false;
+
+function konversiPecahan(nilai) {
+  var steps    = [];
+  var prevSisa = nilai;
+  var maks     = 23;
+  while (prevSisa > 0 && steps.length < maks) {
+    var hasil = prevSisa * 2;
+    var bit   = Math.floor(hasil);
+    var sisa  = parseFloat((hasil - bit).toFixed(10));
+    steps.push({
+      inputVal: parseFloat(prevSisa.toFixed(10)),
+      hasil:    parseFloat(hasil.toFixed(10)),
+      bit:      bit,
+      sisa:     sisa
+    });
+    prevSisa = sisa;
+    if (sisa === 0) break;
+  }
+  return steps;
+}
+
+function normalisasi(bits) {
+  var binerStr = '0.' + bits;
+  var geser    = 0;
+  var mantissa = '';
+  for (var i = 0; i < bits.length; i++) {
+    if (bits[i] === '1') {
+      geser    = -(i + 1);
+      mantissa = bits.slice(i + 1);
+      break;
+    }
+  }
+  return { binerStr: binerStr, geser: geser, mantissa: mantissa };
+}
+
+function deactivateAll() {
+  var list = document.getElementById('step-list');
+  if (!list) return;
+  var items = list.querySelectorAll('.step-item');
+  for (var i = 0; i < items.length; i++) {
+    items[i].classList.remove('active');
+    items[i].classList.add('done');
+    var num = items[i].querySelector('.step-num');
+    if (num) num.classList.remove('active');
+  }
+}
+
+function renderStep(lk, idx, isActive) {
+  var list = document.getElementById('step-list');
+  var div  = document.createElement('div');
+  div.className = 'step-item ' + (isActive ? 'active' : 'done');
+  div.id = 'step-' + idx;
+
+  var numDiv = document.createElement('div');
+  numDiv.className = 'step-num' + (isActive ? ' active' : '');
+  numDiv.textContent = idx + 1;
+
+  var opDiv = document.createElement('div');
+  opDiv.className = 'step-op';
+  opDiv.innerHTML = '<b>' + lk.inputVal + '</b> &times; 2 = <b>' + lk.hasil + '</b>';
+
+  var bitSpan = document.createElement('span');
+  bitSpan.className = 'bit-badge bit-' + lk.bit;
+  bitSpan.textContent = lk.bit;
+
+  var sisaSpan = document.createElement('span');
+  sisaSpan.className = 'step-sisa';
+  sisaSpan.textContent = 'sisa: ' + lk.sisa;
+
+  div.appendChild(numDiv);
+  div.appendChild(opDiv);
+  div.appendChild(bitSpan);
+  div.appendChild(sisaSpan);
+  list.appendChild(div);
+}
+
+function mulai() {
+  var input = document.getElementById('nilai');
+  var rawVal = input.value.replace(',', '.');  // handle koma desimal
+  var val    = parseFloat(rawVal);
+  if (isNaN(val) || val <= 0 || val >= 1) {
+    alert('Masukkan nilai antara 0 dan 1 (tidak termasuk 0 dan 1).\nContoh: 0.15625 atau 0.375');
+    return;
+  }
+  langkahData   = konversiPecahan(val);
+  langkahTampil = 0;
+  sudahSelesai  = false;
+
+  document.getElementById('step-list').innerHTML  = '';
+  document.getElementById('result-area').innerHTML = '';
+  var sc = document.getElementById('step-card');
+  sc.style.display = 'flex';
+  sc.style.flexDirection = 'column';
+  document.getElementById('btn-next').disabled  = false;
+  document.getElementById('btn-all').disabled   = false;
+  document.getElementById('btn-mulai').disabled = true;
+}
+
+function nextStep() {
+  if (langkahTampil >= langkahData.length) {
+    showResult();
+    return;
+  }
+  deactivateAll();
+  var lk = langkahData[langkahTampil];
+  renderStep(lk, langkahTampil, true);
+  langkahTampil++;
+}
+
+function showAll() {
+  document.getElementById('step-list').innerHTML = '';
+  for (var i = 0; i < langkahData.length; i++) {
+    renderStep(langkahData[i], i, i === langkahData.length - 1);
+  }
+  langkahTampil = langkahData.length;
+  setTimeout(showResult, 300);
+}
+
+function showResult() {
+  if (sudahSelesai) return;
+  sudahSelesai = true;
+  document.getElementById('btn-next').disabled = true;
+  document.getElementById('btn-all').disabled  = true;
+
+  var bits    = langkahData.map(function(l) { return l.bit; }).join('');
+  var norm    = normalisasi(bits);
+  var mantPad = (norm.mantissa + '00000000000000000000000').slice(0, 23);
+  var bias    = 127;
+  var expVal  = norm.geser + bias;
+  var expBin  = expVal.toString(2);
+  while (expBin.length < 8) expBin = '0' + expBin;
+
+  var ra = document.getElementById('result-area');
+
+  // Result biner
+  var divBiner = document.createElement('div');
+  divBiner.className = 'result-biner';
+  divBiner.innerHTML =
+    '<div class="rb-label">Hasil Konversi Biner</div>' +
+    '<div class="rb-nilai">' + norm.binerStr + '</div>' +
+    '<div class="rb-seq">Baca dari atas ke bawah: ' +
+      langkahData.map(function(l){ return l.bit; }).join(' &rarr; ') +
+    '</div>';
+  ra.appendChild(divBiner);
+
+  // Normalisasi
+  var divNorm = document.createElement('div');
+  divNorm.className = 'norm-box';
+  divNorm.innerHTML =
+    '<h4>&#128208; Normalisasi</h4>' +
+    '<div class="norm-eq">' + norm.binerStr + ' &nbsp;=&nbsp; <strong>1.' + norm.mantissa + ' &times; 2<sup>' + norm.geser + '</sup></strong></div>' +
+    '<small>Geser titik desimal ke kanan sampai ada satu angka &ldquo;1&rdquo; di depan titik</small>';
+  ra.appendChild(divNorm);
+
+  // IEEE 754
+  var divIEEE = document.createElement('div');
+  divIEEE.className = 'ieee-card';
+  divIEEE.innerHTML =
+    '<div class="card-title">Komponen IEEE 754 Single Precision (32-bit)</div>' +
+
+    '<div class="ieee-row">' +
+      '<span class="ieee-lbl">Sign</span>' +
+      '<span class="ieee-sign">&nbsp;0&nbsp;</span>' +
+      '<span class="ieee-note">Positif &rarr; 0</span>' +
+    '</div>' +
+
+    '<div class="ieee-row">' +
+      '<span class="ieee-lbl">Exponent</span>' +
+      '<span class="ieee-exp">' + expBin + '</span>' +
+      '<span class="ieee-note">' + norm.geser + ' + 127 (bias) = ' + expVal + ' = ' + expBin + '&#8322;</span>' +
+    '</div>' +
+
+    '<div class="ieee-row">' +
+      '<span class="ieee-lbl">Mantissa</span>' +
+      '<span class="ieee-mant">' + mantPad + '</span>' +
+      '<span class="ieee-note">Bagian setelah &ldquo;1.&rdquo; &rarr; pad nol sampai 23 bit</span>' +
+    '</div>' +
+
+    '<div class="ieee-final">0 &nbsp;&nbsp; ' + expBin + ' &nbsp;&nbsp; ' + mantPad + '</div>';
+  ra.appendChild(divIEEE);
+
+  /* scroll tidak diperlukan — result ada di kolom kanan */
+}
+
+function doReset() {
+  langkahData   = [];
+  langkahTampil = 0;
+  sudahSelesai  = false;
+  document.getElementById('step-list').innerHTML   = '';
+  document.getElementById('result-area').innerHTML  = '';
+  document.getElementById('step-card').style.display = 'none';
+  var ra3 = document.getElementById('result-area');
+  ra3.innerHTML = '<div class="ieee-placeholder"><div style="font-size:44px;margin-bottom:10px;">&#128210;</div><div style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:6px;">Hasil IEEE 754</div><div style="font-size:12px;color:var(--muted);line-height:1.6;">Masukkan nilai dan klik <b>Mulai</b><br>untuk melihat hasil konversi di sini.</div></div>';
+  document.getElementById('btn-next').disabled   = true;
+  document.getElementById('btn-all').disabled    = true;
+  document.getElementById('btn-mulai').disabled  = false;
+}
+
+/* ── HEKSA ── */
+function pad2(n)  { return n.toString(16).toUpperCase().padStart(2,'0'); }
+function bin8(n)  { return n.toString(2).padStart(8,'0'); }
+function bright(r,g,b) { return (r*299 + g*587 + b*114) / 1000; }
+
+var presets = [
+  { name:'Merah',   hex:'#E74C3C', r:231, g:76,  b:60  },
+  { name:'Biru',    hex:'#3498DB', r:52,  g:152, b:219 },
+  { name:'Hijau',   hex:'#2ECC71', r:46,  g:204, b:113 },
+  { name:'Abu',     hex:'#95A5A6', r:149, g:165, b:166 },
+  { name:'Gelap',   hex:'#2C3E50', r:44,  g:62,  b:80  },
+  { name:'Putih',   hex:'#FFFFFF', r:255, g:255, b:255 },
+];
+
+(function buildPresets() {
+  var grid = document.getElementById('presets');
+  presets.forEach(function(p) {
+    var tc = bright(p.r,p.g,p.b) < 128 ? '#ffffff' : '#1a1a2e';
+    var div = document.createElement('div');
+    div.className = 'preset-swatch';
+    div.style.background = p.hex;
+    div.style.color = tc;
+    div.innerHTML = p.hex + '<span class="preset-name">' + p.name + '</span>';
+    div.onclick = (function(pr,pg,pb){
+      return function(){
+        document.getElementById('sr').value = pr;
+        document.getElementById('sg').value = pg;
+        document.getElementById('sb').value = pb;
+        update();
+      };
+    })(p.r, p.g, p.b);
+    grid.appendChild(div);
+  });
+})();
+
+function update() {
+  var r = +document.getElementById('sr').value;
+  var g = +document.getElementById('sg').value;
+  var b = +document.getElementById('sb').value;
+
+  document.getElementById('vr').textContent = r;
+  document.getElementById('vg').textContent = g;
+  document.getElementById('vb').textContent = b;
+
+  var hr = pad2(r), hg = pad2(g), hb = pad2(b);
+  var hex = '#' + hr + hg + hb;
+  var tc  = bright(r,g,b) < 128 ? '#ffffff' : '#1a1a2e';
+
+  var sw = document.getElementById('swatch');
+  sw.style.background = hex;
+  sw.style.color = tc;
+  sw.textContent = hex;
+
+  document.getElementById('cr').textContent = r;
+  document.getElementById('hr').innerHTML   = hr + '<sub>16</sub>';
+  document.getElementById('br').textContent = bin8(r);
+  document.getElementById('cg').textContent = g;
+  document.getElementById('hg').innerHTML   = hg + '<sub>16</sub>';
+  document.getElementById('bg').textContent = bin8(g);
+  document.getElementById('cb').textContent = b;
+  document.getElementById('hb').innerHTML   = hb + '<sub>16</sub>';
+  document.getElementById('bb').textContent = bin8(b);
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  render();
+  buildPresets();
+  update();
+});</script>
+</body>
+</html>

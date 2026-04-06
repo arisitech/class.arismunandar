@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>STRIDE Classifier — Siskamjar Modul 3</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:Arial,sans-serif;background:#f0f4f8;color:#1A2A4A;display:flex;flex-direction:column}
+
+/* Header */
+.header{background:#1A2A4A;color:white;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.badge{background:#0D7A8A;font-size:10px;font-weight:bold;padding:2px 7px;border-radius:4px;color:white}
+.header h1{font-size:16px;font-weight:bold}
+.header p{font-size:10px;color:#9fb8d4;margin-top:1px}
+.score-box{background:#1E3A5F;border-radius:7px;padding:6px 14px;text-align:center;min-width:70px}
+.score-num{font-size:20px;font-weight:bold;color:#F0A500;line-height:1}
+.score-lbl{font-size:9px;color:#9fb8d4;margin-top:1px}
+
+/* STRIDE ref strip */
+.stride-ref{background:#1E3A5F;padding:6px 20px;display:flex;gap:12px;flex-wrap:nowrap;flex-shrink:0;overflow-x:auto}
+.ref-item{font-size:10px;color:#9fb8d4;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.ref-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* Progress */
+.progress-wrap{padding:6px 20px;background:white;border-bottom:1px solid #e8edf2;flex-shrink:0}
+.progress-top{display:flex;justify-content:space-between;font-size:11px;color:#888;margin-bottom:4px}
+.progress-bar{background:#dde4ec;border-radius:4px;height:5px}
+.progress-fill{height:100%;background:linear-gradient(90deg,#0D7A8A,#2E75B6);border-radius:4px;transition:width .4s}
+
+/* Main scrollable area */
+.main{flex:1;overflow-y:auto;padding:12px 20px;display:flex;flex-direction:column;gap:10px}
+
+/* Scenario */
+.scenario-card{background:white;border-radius:10px;padding:14px 16px;box-shadow:0 1px 6px rgba(0,0,0,.07);border-left:4px solid #0D7A8A;animation:slideIn .3s ease;flex-shrink:0}
+@keyframes slideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.scenario-tag{font-size:9px;font-weight:bold;color:#0D7A8A;text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px}
+.scenario-text{font-size:13px;color:#1A2A4A;line-height:1.6;font-weight:500}
+.scenario-hint{margin-top:6px;font-size:11px;color:#999;font-style:italic}
+
+/* STRIDE grid */
+.stride-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;flex-shrink:0}
+.stride-btn{padding:9px 6px;border:2px solid #e0e8f0;border-radius:8px;background:white;cursor:pointer;transition:all .12s;text-align:center}
+.stride-btn:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(0,0,0,.1)}
+.stride-btn .s-letter{font-size:18px;font-weight:bold;line-height:1}
+.stride-btn .s-name{font-size:10px;font-weight:bold;margin-top:2px}
+.stride-btn .s-desc{font-size:9px;color:#888;line-height:1.2;margin-top:1px}
+
+.stride-btn.S{border-color:#E8593C20}.stride-btn.S:hover,.stride-btn.S.selected{border-color:#E8593C;background:#fff5f3}.stride-btn.S .s-letter{color:#E8593C}
+.stride-btn.T{border-color:#d2992220}.stride-btn.T:hover,.stride-btn.T.selected{border-color:#d29922;background:#fffbf0}.stride-btn.T .s-letter{color:#d29922}
+.stride-btn.R{border-color:#2E75B620}.stride-btn.R:hover,.stride-btn.R.selected{border-color:#2E75B6;background:#f0f7ff}.stride-btn.R .s-letter{color:#2E75B6}
+.stride-btn.I{border-color:#8B44CC20}.stride-btn.I:hover,.stride-btn.I.selected{border-color:#8B44CC;background:#faf5ff}.stride-btn.I .s-letter{color:#8B44CC}
+.stride-btn.D{border-color:#cc444420}.stride-btn.D:hover,.stride-btn.D.selected{border-color:#cc4444;background:#fff5f5}.stride-btn.D .s-letter{color:#cc4444}
+.stride-btn.E{border-color:#1a8a3a20}.stride-btn.E:hover,.stride-btn.E.selected{border-color:#1a8a3a;background:#f0fdf4}.stride-btn.E .s-letter{color:#1a8a3a}
+
+.stride-btn.correct{border-width:2px;box-shadow:0 0 0 3px rgba(34,197,94,.2)}
+.stride-btn.S.correct{border-color:#E8593C;background:#fff5f3}
+.stride-btn.T.correct{border-color:#d29922;background:#fffbf0}
+.stride-btn.R.correct{border-color:#2E75B6;background:#f0f7ff}
+.stride-btn.I.correct{border-color:#8B44CC;background:#faf5ff}
+.stride-btn.D.correct{border-color:#cc4444;background:#fff5f5}
+.stride-btn.E.correct{border-color:#1a8a3a;background:#f0fdf4}
+.stride-btn.wrong{border-color:#e0e0e0!important;background:#f5f5f5!important;opacity:.4}
+.stride-btn.wrong .s-letter{color:#bbb!important}
+.stride-btn:disabled{cursor:default}
+
+/* Feedback */
+.feedback{display:none;border-radius:8px;padding:11px 14px;animation:fadeIn .25s ease;flex-shrink:0}
+.feedback.show{display:block}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.feedback.correct-fb{background:#f0fdf4;border:1px solid #86efac}
+.feedback.wrong-fb{background:#fef2f2;border:1px solid #fca5a5}
+.fb-title{font-size:13px;font-weight:bold;margin-bottom:7px}
+.fb-title.ok{color:#16a34a}
+.fb-title.err{color:#dc2626}
+.fb-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:4px}
+.fb-row{font-size:11px}
+.fb-lbl{font-weight:bold;color:#666;font-size:10px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
+.fb-val{color:#333;line-height:1.4}
+.fb-row-full{font-size:11px;margin-top:4px}
+.fb-cia{display:inline-block;font-size:10px;font-weight:bold;padding:1px 7px;border-radius:6px}
+.cia-c{background:#fde8e8;color:#cc2222}
+.cia-i{background:#e8f4e8;color:#1a7a1a}
+.cia-a{background:#e8f0fe;color:#1a4acc}
+.cia-auth{background:#ede8f8;color:#5c2ab8}
+.cia-acc{background:#fff3e0;color:#b85c00}
+
+/* Next button */
+.next-btn{display:none;width:100%;padding:10px;background:#1A2A4A;color:white;border:none;border-radius:8px;font-size:13px;font-weight:bold;cursor:pointer;transition:background .15s;flex-shrink:0}
+.next-btn.show{display:block}
+.next-btn:hover{background:#0D7A8A}
+
+/* Result */
+.result-screen{display:none;flex-direction:column;align-items:center;text-align:center;padding:20px;animation:slideIn .4s}
+.result-screen.show{display:flex}
+.result-icon{font-size:52px;margin-bottom:8px}
+.result-title{font-size:20px;font-weight:bold;color:#1A2A4A}
+.result-score{font-size:34px;font-weight:bold;color:#F0A500;margin:8px 0}
+.result-sub{font-size:12px;color:#666;line-height:1.6;margin-bottom:14px;max-width:480px}
+.result-bd{background:white;border-radius:8px;padding:12px;width:100%;max-width:520px;margin-bottom:16px;text-align:left;box-shadow:0 1px 6px rgba(0,0,0,.07)}
+.rb-lbl{font-size:10px;font-weight:bold;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.rb-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:11px}
+.rb-row:last-child{border-bottom:none}
+.rb-scenario{color:#555;flex:1;line-height:1.3}
+.rb-tag{font-size:10px;font-weight:bold;padding:1px 7px;border-radius:6px;flex-shrink:0}
+.rb-ok{background:#dcfce7;color:#16a34a}
+.rb-err{background:#fee2e2;color:#dc2626}
+.restart-btn{padding:10px 28px;background:#1A2A4A;color:white;border:none;border-radius:8px;font-size:13px;font-weight:bold;cursor:pointer}
+.restart-btn:hover{background:#0D7A8A}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="badge">SISKAMJAR</span>
+        <h1>STRIDE Classifier</h1>
+      </div>
+      <p>Modul 3 — Identifikasi Kategori Serangan  ·  STTI NIIT Jakarta</p>
+    </div>
+  </div>
+  <div class="score-box">
+    <div class="score-num" id="score-display">0</div>
+    <div class="score-lbl">SKOR</div>
+  </div>
+</div>
+
+<!-- STRIDE ref -->
+<div class="stride-ref">
+  <div class="ref-item"><div class="ref-dot" style="background:#E8593C"></div><b style="color:white">S</b>poofing</div>
+  <div class="ref-item"><div class="ref-dot" style="background:#d29922"></div><b style="color:white">T</b>ampering</div>
+  <div class="ref-item"><div class="ref-dot" style="background:#2E75B6"></div><b style="color:white">R</b>epudiation</div>
+  <div class="ref-item"><div class="ref-dot" style="background:#8B44CC"></div><b style="color:white">I</b>nfo Disclosure</div>
+  <div class="ref-item"><div class="ref-dot" style="background:#cc4444"></div><b style="color:white">D</b>enial of Service</div>
+  <div class="ref-item"><div class="ref-dot" style="background:#1a8a3a"></div><b style="color:white">E</b>levation of Privilege</div>
+</div>
+
+<!-- Progress -->
+<div class="progress-wrap">
+  <div class="progress-top">
+    <span id="prog-text">Soal 1 dari 8</span>
+    <span id="prog-pct">0%</span>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+</div>
+
+<!-- Main -->
+<div class="main" id="main-area">
+
+  <div class="scenario-card" id="scenario-card">
+    <div class="scenario-tag" id="s-tag"></div>
+    <div class="scenario-text" id="s-text"></div>
+    <div class="scenario-hint" id="s-hint"></div>
+  </div>
+
+  <div class="stride-grid" id="stride-grid">
+    <button class="stride-btn S" data-val="S" onclick="answer('S')">
+      <div class="s-letter">S</div><div class="s-name">Spoofing</div><div class="s-desc">Penyamaran identitas</div>
+    </button>
+    <button class="stride-btn T" data-val="T" onclick="answer('T')">
+      <div class="s-letter">T</div><div class="s-name">Tampering</div><div class="s-desc">Modifikasi ilegal</div>
+    </button>
+    <button class="stride-btn R" data-val="R" onclick="answer('R')">
+      <div class="s-letter">R</div><div class="s-name">Repudiation</div><div class="s-desc">Penyangkalan aktivitas</div>
+    </button>
+    <button class="stride-btn I" data-val="I" onclick="answer('I')">
+      <div class="s-letter">I</div><div class="s-name">Info Disclosure</div><div class="s-desc">Kebocoran informasi</div>
+    </button>
+    <button class="stride-btn D" data-val="D" onclick="answer('D')">
+      <div class="s-letter">D</div><div class="s-name">Denial of Service</div><div class="s-desc">Gangguan layanan</div>
+    </button>
+    <button class="stride-btn E" data-val="E" onclick="answer('E')">
+      <div class="s-letter">E</div><div class="s-name">Elevation of Privilege</div><div class="s-desc">Eskalasi hak akses</div>
+    </button>
+  </div>
+
+  <div class="feedback" id="feedback">
+    <div class="fb-title" id="fb-title"></div>
+    <div class="fb-grid">
+      <div class="fb-row">
+        <div class="fb-lbl">Jawaban</div>
+        <div class="fb-val" id="fb-correct"></div>
+      </div>
+      <div class="fb-row">
+        <div class="fb-lbl">CIA / AAA</div>
+        <div class="fb-val" id="fb-cia"></div>
+      </div>
+    </div>
+    <div class="fb-row-full">
+      <div class="fb-lbl">Penjelasan</div>
+      <div class="fb-val" id="fb-expl"></div>
+    </div>
+    <div class="fb-row-full" style="margin-top:4px">
+      <div class="fb-lbl">Mitigasi</div>
+      <div class="fb-val" id="fb-mit"></div>
+    </div>
+  </div>
+
+  <button class="next-btn" id="next-btn" onclick="nextQ()">Lanjut →</button>
+
+  <!-- Result -->
+  <div class="result-screen" id="result-screen">
+    <div class="result-icon" id="r-icon"></div>
+    <div class="result-title" id="r-title"></div>
+    <div class="result-score" id="r-score"></div>
+    <div class="result-sub" id="r-sub"></div>
+    <div class="result-bd">
+      <div class="rb-lbl">Rincian Jawaban</div>
+      <div id="r-breakdown"></div>
+    </div>
+    <button class="restart-btn" onclick="restart()">🔄 Ulangi</button>
+  </div>
+
+</div>
+
+<script>
+// ── Sound engine (Web Audio API) ──────────────────────────────
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+
+function playTone(freq, type, dur, vol=0.3, delay=0) {
+  const o = AC.createOscillator();
+  const g = AC.createGain();
+  o.connect(g); g.connect(AC.destination);
+  o.type = type; o.frequency.value = freq;
+  const t = AC.currentTime + delay;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.start(t); o.stop(t + dur);
+}
+
+function playNoise(dur, vol=0.15, delay=0) {
+  const buf = AC.createBuffer(1, AC.sampleRate * dur, AC.sampleRate);
+  const d = buf.getChannelData(0);
+  for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+  const src = AC.createBufferSource();
+  const g = AC.createGain();
+  const f = AC.createBiquadFilter();
+  f.type='bandpass'; f.frequency.value=2000; f.Q.value=0.5;
+  src.buffer=buf; src.connect(f); f.connect(g); g.connect(AC.destination);
+  const t = AC.currentTime + delay;
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t+dur);
+  src.start(t); src.stop(t+dur);
+}
+
+function soundCorrect() {
+  // Rising happy ding
+  playTone(523, 'sine', 0.12, 0.25);
+  playTone(659, 'sine', 0.12, 0.25, 0.1);
+  playTone(784, 'sine', 0.18, 0.28, 0.2);
+}
+
+function soundWrong() {
+  // Low buzzer
+  playTone(220, 'sawtooth', 0.08, 0.2);
+  playTone(180, 'sawtooth', 0.12, 0.2, 0.08);
+  playTone(150, 'square',   0.10, 0.15, 0.16);
+}
+
+function soundPerfect() {
+  // Fanfare + applause sim
+  const melody = [523,659,784,1047,784,1047,1319];
+  melody.forEach((f,i) => playTone(f,'sine',0.18,0.3,i*0.1));
+  // Applause: burst of noise
+  for(let i=0;i<8;i++) playNoise(0.08, 0.12, 0.7 + i*0.06);
+  for(let i=0;i<6;i++) playNoise(0.06, 0.10, 1.25 + i*0.07);
+  for(let i=0;i<4;i++) playNoise(0.05, 0.07, 1.8 + i*0.09);
+}
+
+function soundGood() {
+  // Short fanfare
+  const m = [523,659,784,1047];
+  m.forEach((f,i) => playTone(f,'sine',0.15,0.28,i*0.1));
+  for(let i=0;i<4;i++) playNoise(0.07, 0.1, 0.5+i*0.07);
+}
+
+// ── Data ─────────────────────────────────────────────────────
+const SCENARIOS = [
+  { tag:"Jaringan Kampus", answer:"S",
+    text:"Seorang mahasiswa mengirimkan ARP Reply palsu ke jaringan, mengklaim bahwa MAC address-nya adalah MAC address Router/Gateway. Trafik semua pengguna mulai mengalir melalui laptopnya.",
+    hint:"💡 Identitas siapa yang dipalsukan?",
+    cia:["Confidentiality"], badges:["cia-c"],
+    expl:"Penyerang memalsukan identitas Gateway — ini Spoofing. MAC address gateway dipalsukan untuk mengarahkan trafik ke penyerang (MitM).",
+    mit:"Dynamic ARP Inspection (DAI) pada switch manageable, Static ARP entry untuk gateway kritis."
+  },
+  { tag:"Database Nilai", answer:"T",
+    text:"Seorang mahasiswa berhasil mengakses database dan mengubah nilai ujiannya dari 45 menjadi 90 tanpa sepengetahuan dosen maupun sistem.",
+    hint:"💡 Apa yang terjadi pada data nilai tersebut?",
+    cia:["Integrity"], badges:["cia-i"],
+    expl:"Data dimodifikasi secara tidak sah — ini Tampering. Integritas data akademik dilanggar karena nilai diubah tanpa otorisasi.",
+    mit:"Input validation, prepared statements (cegah SQL Injection), audit log perubahan data, RBAC."
+  },
+  { tag:"Log Server", answer:"R",
+    text:"Admin IT mengakses data gaji seluruh karyawan tanpa izin, lalu menghapus semua log akses server agar tidak ada bukti aktivitasnya.",
+    hint:"💡 Fokus pada tindakan menghapus log — prinsip apa yang diserang?",
+    cia:["Accounting / Non-repudiation"], badges:["cia-acc"],
+    expl:"Admin menghilangkan bukti agar tidak bisa dibuktikan ia melakukan akses tidak sah — ini Repudiation. Prinsip Accounting dilanggar.",
+    mit:"Syslog terpusat (log real-time ke server terpisah), SIEM, immutable audit trail."
+  },
+  { tag:"Portal E-campus", answer:"I",
+    text:"Penyerang menyadap trafik HTTP antara mahasiswa dan portal e-campus, berhasil mendapatkan username dan password login mahasiswa.",
+    hint:"💡 Data apa yang bocor kepada pihak yang tidak berhak?",
+    cia:["Confidentiality"], badges:["cia-c"],
+    expl:"Kredensial login terekspos ke penyerang yang tidak berhak — ini Information Disclosure. Kerahasiaan data dilanggar.",
+    mit:"Enkripsi HTTPS/TLS wajib di semua halaman, HSTS (HTTP Strict Transport Security)."
+  },
+  { tag:"Server E-campus", answer:"D",
+    text:"Mahasiswa mengirimkan ribuan paket SYN palsu ke server e-campus. Tabel koneksi server penuh dan dosen tidak bisa mengakses sistem input nilai menjelang deadline.",
+    hint:"💡 Layanan apa yang terdampak?",
+    cia:["Availability"], badges:["cia-a"],
+    expl:"Server tidak bisa melayani pengguna sah karena sumber daya habis — ini Denial of Service. Availability dilanggar.",
+    mit:"SYN Cookies, firewall rate-limiting, IPS untuk deteksi SYN flood."
+  },
+  { tag:"Sistem E-campus", answer:"E",
+    text:"Mahasiswa semester 3 menemukan celah pada sistem dan berhasil mengakses menu 'Input Nilai' yang seharusnya hanya bisa digunakan oleh dosen.",
+    hint:"💡 Hak akses apa yang berhasil didapatkan mahasiswa?",
+    cia:["Authorization"], badges:["cia-auth"],
+    expl:"Mahasiswa mendapat hak akses lebih tinggi dari seharusnya — ini Elevation of Privilege. Authorization dan Least Privilege dilanggar.",
+    mit:"RBAC yang ketat, patch management rutin, penetration testing berkala."
+  },
+  { tag:"Wi-Fi Kampus", answer:"T",
+    text:"Di jaringan flat network kampus, penyerang mengubah isi file PDF tugas yang dikirim mahasiswa ke dosen menjadi file berisi malware, tanpa diketahui keduanya.",
+    hint:"💡 Apa yang terjadi pada file yang dikirim?",
+    cia:["Integrity"], badges:["cia-i"],
+    expl:"Konten file dimodifikasi selama transit (MitM) — ini Tampering. Integritas data dilanggar.",
+    mit:"Enkripsi end-to-end, digital signature untuk verifikasi integritas file, HTTPS wajib."
+  },
+  { tag:"Laporan Keuangan", answer:"R",
+    text:"Staf keuangan menyangkal pernah mentransfer dana kampus ke rekening pribadi. Sistem tidak memiliki log transaksi yang memadai untuk membuktikannya.",
+    hint:"💡 Mengapa pelaku bisa menyangkal? Apa yang tidak dimiliki sistem?",
+    cia:["Accounting / Non-repudiation"], badges:["cia-acc"],
+    expl:"Pelaku bisa menyangkal karena tidak ada bukti digital — ini Repudiation. Sistem tidak memiliki audit trail untuk Non-repudiation.",
+    mit:"Audit log immutable untuk semua transaksi, digital signature, SIEM dengan alerting."
+  },
+];
+
+const SNAMES = {S:"Spoofing",T:"Tampering",R:"Repudiation",I:"Info Disclosure",D:"Denial of Service",E:"Elevation of Privilege"};
+const SCOLS  = {S:"#E8593C",T:"#d29922",R:"#2E75B6",I:"#8B44CC",D:"#cc4444",E:"#1a8a3a"};
+
+let cur=0, score=0, answered=false, history=[], order=[];
+
+function shuffle(a){ return a.sort(()=>Math.random()-.5); }
+
+function init(){
+  order = shuffle([...Array(SCENARIOS.length).keys()]);
+  cur=0; score=0; answered=false; history=[];
+  document.getElementById('score-display').textContent='0';
+  document.getElementById('result-screen').classList.remove('show');
+  document.getElementById('scenario-card').style.display='';
+  document.getElementById('stride-grid').style.display='';
+  showQ();
+}
+
+function showQ(){
+  const s = SCENARIOS[order[cur]];
+  document.getElementById('s-tag').textContent = '📍 '+s.tag;
+  document.getElementById('s-text').textContent = s.text;
+  document.getElementById('s-hint').textContent = s.hint;
+  const pct = Math.round(cur/SCENARIOS.length*100);
+  document.getElementById('prog-text').textContent = `Soal ${cur+1} dari ${SCENARIOS.length}`;
+  document.getElementById('prog-pct').textContent = pct+'%';
+  document.getElementById('prog-fill').style.width = pct+'%';
+  document.querySelectorAll('.stride-btn').forEach(b=>{
+    b.classList.remove('correct','wrong'); b.disabled=false; b.style.transform='';
+  });
+  document.getElementById('feedback').className='feedback';
+  document.getElementById('next-btn').className='next-btn';
+  answered=false;
+  // scroll to top
+  document.getElementById('main-area').scrollTop=0;
+}
+
+function answer(val){
+  if(answered) return;
+  if(AC.state==='suspended') AC.resume();
+  answered=true;
+  const s = SCENARIOS[order[cur]];
+  const ok = val===s.answer;
+  document.querySelectorAll('.stride-btn').forEach(b=>{
+    b.disabled=true;
+    if(b.dataset.val===s.answer) b.classList.add('correct');
+    else b.classList.add('wrong');
+  });
+  if(ok){ score++; document.getElementById('score-display').textContent=score; soundCorrect(); }
+  else { soundWrong(); }
+  history.push({ok, snippet:s.text.substring(0,55)+'…', ans:s.answer});
+
+  // Feedback
+  const fb=document.getElementById('feedback');
+  fb.className='feedback show '+(ok?'correct-fb':'wrong-fb');
+  const tEl=document.getElementById('fb-title');
+  tEl.className='fb-title '+(ok?'ok':'err');
+  tEl.textContent=ok?'✅ Benar!':'❌ Kurang tepat';
+  document.getElementById('fb-correct').innerHTML=
+    `<strong style="color:${SCOLS[s.answer]}">${SNAMES[s.answer]}</strong>`;
+  document.getElementById('fb-cia').innerHTML=
+    s.cia.map((c,i)=>`<span class="fb-cia ${s.badges[i]}">${c}</span>`).join(' ');
+  document.getElementById('fb-expl').textContent=s.expl;
+  document.getElementById('fb-mit').textContent=s.mit;
+
+  const nb=document.getElementById('next-btn');
+  nb.className='next-btn show';
+  nb.textContent=cur===SCENARIOS.length-1?'Lihat Hasil →':'Lanjut →';
+}
+
+function nextQ(){
+  cur++;
+  if(cur>=SCENARIOS.length) showResult();
+  else showQ();
+}
+
+function showResult(){
+  document.getElementById('scenario-card').style.display='none';
+  document.getElementById('stride-grid').style.display='none';
+  document.getElementById('feedback').className='feedback';
+  document.getElementById('next-btn').className='next-btn';
+  document.getElementById('prog-fill').style.width='100%';
+  document.getElementById('prog-text').textContent='Selesai!';
+  document.getElementById('prog-pct').textContent='100%';
+
+  const pct=Math.round(score/SCENARIOS.length*100);
+  const isPerfect = score===SCENARIOS.length;
+  document.getElementById('r-icon').textContent=isPerfect?'🏆':pct>=75?'🎉':pct>=50?'👍':'📚';
+  document.getElementById('r-title').textContent=isPerfect?'Sempurna!':pct>=75?'Luar Biasa!':pct>=50?'Bagus!':'Perlu Latihan';
+  document.getElementById('r-score').textContent=`${score} / ${SCENARIOS.length}`;
+  document.getElementById('r-sub').textContent=isPerfect
+    ?'Semua jawaban benar! Anda benar-benar menguasai STRIDE. Siap menghadapi quiz!'
+    :pct>=75?'Hampir sempurna! Review kembali kategori yang masih keliru.'
+    :pct>=50?'Pemahaman cukup. Pelajari kembali hubungan STRIDE dengan CIA Triad.'
+    :'Pelajari kembali tabel STRIDE di BPD Modul 3 sebelum mengikuti quiz.';
+
+  document.getElementById('r-breakdown').innerHTML=history.map((h,i)=>
+    `<div class="rb-row">
+      <span style="font-size:13px">${h.ok?'✅':'❌'}</span>
+      <span class="rb-scenario">Soal ${i+1}: ${h.snippet}</span>
+      <span class="rb-tag ${h.ok?'rb-ok':'rb-err'}">${SNAMES[h.ans]}</span>
+    </div>`).join('');
+
+  document.getElementById('result-screen').classList.add('show');
+  document.getElementById('main-area').scrollTop=0;
+
+  // Sound based on score
+  setTimeout(()=>{
+    if(AC.state==='suspended') AC.resume().then(()=>{
+      isPerfect ? soundPerfect() : pct>=75 ? soundGood() : null;
+    });
+    else {
+      isPerfect ? soundPerfect() : pct>=75 ? soundGood() : null;
+    }
+  }, 300);
+}
+
+function restart(){ init(); document.getElementById('main-area').scrollTop=0; }
+
+init();
+</script>
+</body>
+</html>

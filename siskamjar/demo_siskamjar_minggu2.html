@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAA Framework Simulator — Siskamjar Modul 2</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f0f4f8; color: #1A2A4A; min-height: 100vh; }
+  .header { background: #1A2A4A; color: white; padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
+  .header-badge { background: #0D7A8A; color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; }
+  .header h1 { font-size: 18px; font-weight: bold; }
+  .header p  { font-size: 12px; color: #9fb8d4; margin-top: 2px; }
+  .main { display: grid; grid-template-columns: 270px 1fr; gap: 14px; padding: 14px; max-width: 1200px; margin: 0 auto; }
+  .panel { background: white; border-radius: 10px; padding: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  .panel-title { font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: .8px; color: #0D7A8A; margin-bottom: 10px; }
+  .user-card { border: 2px solid #e0e8f0; border-radius: 8px; padding: 9px 11px; margin-bottom: 6px; cursor: pointer; transition: all .15s; }
+  .user-card:hover { border-color: #0D7A8A; background: #f0fafb; }
+  .user-card.active { border-color: #0D7A8A; background: #e8f7f9; }
+  .user-card.new-user { border-style: dashed; border-color: #22c55e; background: #f0fdf4; }
+  .user-card.new-user.active { background: #dcfce7; }
+  .user-name { font-weight: bold; font-size: 13px; }
+  .user-role-sub { font-size: 11px; color: #666; margin-top: 1px; }
+  .role-badge { display: inline-block; font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 10px; margin-top: 4px; }
+  .role-dosen { background: #e8f4e8; color: #2a7a2a; }
+  .role-mhs   { background: #fff3e0; color: #b85c00; }
+  .role-admin { background: #ede8f8; color: #5c2ab8; }
+  .role-new   { background: #dcfce7; color: #16a34a; }
+  .login-btn { width: 100%; margin-top: 10px; padding: 9px; background: #1A2A4A; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; }
+  .login-btn:hover { background: #0D7A8A; }
+  .login-btn:disabled { background: #ccc; cursor: not-allowed; }
+  .rbac-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 6px; }
+  .rbac-table th { background: #1E3A5F; color: #D0DBE8; padding: 5px 6px; text-align: left; }
+  .rbac-table td { padding: 4px 6px; border-bottom: 1px solid #f0f0f0; }
+  .perm-yes { color: #1a8a1a; font-weight: bold; }
+  .perm-no  { color: #cc2222; }
+  .right-col { display: flex; flex-direction: column; gap: 11px; }
+  .status-bar { background: #1E3A5F; color: white; border-radius: 8px; padding: 9px 15px; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #555; flex-shrink: 0; }
+  .status-dot.online { background: #44cc44; box-shadow: 0 0 6px #44cc44; }
+  .logged-in { font-weight: bold; color: #F0A500; }
+  .explorer { background: white; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.08); overflow: hidden; }
+  .explorer-path { background: #1A2A4A; color: white; padding: 9px 15px; font-size: 12px; font-family: monospace; }
+  .toolbar { background: #f5f7fa; border-bottom: 1px solid #e0e8f0; padding: 7px 14px; display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+  .action-btn { padding: 5px 11px; font-size: 12px; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; transition: filter .15s; }
+  .action-btn:hover { filter: brightness(.9); }
+  .btn-read    { background: #e8f4f5; color: #0D7A8A; }
+  .btn-write   { background: #e8f4e8; color: #1a7a1a; }
+  .btn-delete  { background: #fde8e8; color: #cc2222; }
+  .btn-perm    { background: #ede8f8; color: #5c2ab8; }
+  .btn-adduser { background: #1A2A4A; color: #F0A500; margin-left: auto; }
+  .file-list { padding: 10px 14px; }
+  .file-item { display: flex; align-items: center; gap: 9px; padding: 7px 9px; border-radius: 6px; cursor: pointer; margin-bottom: 3px; }
+  .file-item:hover { background: #f0f7ff; }
+  .file-item.selected { background: #ddeeff; }
+  .file-icon { font-size: 16px; }
+  .file-name { font-size: 12px; font-weight: bold; }
+  .file-meta { font-size: 10px; color: #888; }
+  .file-perm { font-size: 10px; padding: 1px 6px; border-radius: 8px; margin-left: auto; white-space: nowrap; }
+  .fp-rw { background: #e8f4e8; color: #1a7a1a; }
+  .fp-ro { background: #fff3e0; color: #b85c00; }
+  .result-popup { position: fixed; top: 74px; right: 18px; width: 300px; border-radius: 10px; padding: 12px 14px; box-shadow: 0 4px 20px rgba(0,0,0,.2); font-size: 12px; z-index: 100; transform: translateX(340px); transition: transform .3s; }
+  .result-popup.show { transform: translateX(0); }
+  .result-popup.granted { background: #f0fdf4; border-left: 4px solid #22c55e; }
+  .result-popup.denied  { background: #fef2f2; border-left: 4px solid #ef4444; }
+  .result-title { font-weight: bold; font-size: 13px; margin-bottom: 4px; }
+  .rt-ok  { color: #16a34a; }
+  .rt-err { color: #dc2626; }
+  .log-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .log-label { font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: .7px; margin-bottom: 5px; }
+  .log-panel { background: #0d1117; border-radius: 8px; padding: 9px 11px; font-family: monospace; font-size: 11px; height: 165px; overflow-y: auto; }
+  .siem-border { border: 1px solid rgba(249,115,22,.4); }
+  .log-line { padding: 1px 0; line-height: 1.65; }
+  .lt { color: #8b949e; }
+  .lok  { color: #3fb950; }
+  .lfl  { color: #f85149; }
+  .lwn  { color: #d29922; }
+  .lin  { color: #58a6ff; }
+  .lal  { color: #f97316; font-weight: bold; }
+  .log-note { font-size: 10px; color: #666; margin-top: 3px; }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; align-items: center; justify-content: center; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: white; border-radius: 12px; padding: 22px 24px; width: 340px; box-shadow: 0 8px 30px rgba(0,0,0,.25); }
+  .modal h3 { font-size: 15px; color: #1A2A4A; margin-bottom: 3px; }
+  .modal-sub { font-size: 11px; color: #777; margin-bottom: 14px; }
+  .modal label { font-size: 11px; font-weight: bold; color: #444; display: block; margin-bottom: 3px; }
+  .modal input { width: 100%; padding: 7px 9px; border: 1px solid #d0d8e8; border-radius: 6px; font-size: 13px; margin-bottom: 11px; }
+  .group-box { background: #e8f4e8; border: 1px solid #a8d8a8; color: #1a7a1a; padding: 7px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; margin-bottom: 14px; }
+  .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+  .btn-cancel  { padding: 7px 14px; background: #f0f4f8; border: 1px solid #d0d8e8; border-radius: 6px; cursor: pointer; font-size: 12px; }
+  .btn-confirm { padding: 7px 14px; background: #1A2A4A; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; }
+  .btn-confirm:hover { background: #0D7A8A; }
+  .empty-state { text-align: center; padding: 30px 20px; color: #999; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="header-badge">SISKAMJAR</span>
+      <h1>AAA Framework Simulator</h1>
+    </div>
+    <p>Modul 2 — Authentication, Authorization, Accounting  ·  STTI NIIT Jakarta</p>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- Kiri -->
+  <div style="display:flex;flex-direction:column;gap:11px">
+    <div class="panel">
+      <div class="panel-title">🔐 Pilih User — Login</div>
+      <div id="user-list">
+        <div class="user-card" id="card-dosen" onclick="selectUser('dosen')">
+          <div class="user-name">Dosen_Aris</div>
+          <div class="user-role-sub">Group_Dosen</div>
+          <span class="role-badge role-dosen">DOSEN</span>
+        </div>
+        <div class="user-card" id="card-mhs" onclick="selectUser('mhs')">
+          <div class="user-name">Mhs_Budi</div>
+          <div class="user-role-sub">Group_Mahasiswa</div>
+          <span class="role-badge role-mhs">MAHASISWA</span>
+        </div>
+        <div class="user-card" id="card-admin" onclick="selectUser('admin')">
+          <div class="user-name">Admin_IT</div>
+          <div class="user-role-sub">Group_Admin</div>
+          <span class="role-badge role-admin">ADMIN IT</span>
+        </div>
+      </div>
+      <button class="login-btn" id="login-btn" onclick="doLogin()" disabled>Pilih User untuk Login</button>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">📋 Permission Matrix</div>
+      <table class="rbac-table">
+        <thead><tr><th>Role</th><th>Read</th><th>Write</th><th>Del</th><th>Admin</th></tr></thead>
+        <tbody>
+          <tr><td><span class="role-badge role-dosen">DOSEN</span></td><td class="perm-yes">✓</td><td class="perm-yes">✓</td><td class="perm-no">✗</td><td class="perm-no">✗</td></tr>
+          <tr><td><span class="role-badge role-mhs">MAHASISWA</span></td><td class="perm-yes">✓</td><td class="perm-no">✗</td><td class="perm-no">✗</td><td class="perm-no">✗</td></tr>
+          <tr><td><span class="role-badge role-admin">ADMIN IT</span></td><td class="perm-yes">✓</td><td class="perm-no">✗</td><td class="perm-yes">✓</td><td class="perm-yes">✓</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:10px;color:#999;margin-top:6px">⚠️ 3x Access Denied berturut → SIEM Alert</p>
+    </div>
+  </div>
+
+  <!-- Kanan -->
+  <div class="right-col">
+    <div class="status-bar">
+      <div class="status-dot" id="sdot"></div>
+      <span id="stext">Belum login — pilih user di sebelah kiri</span>
+    </div>
+
+    <div class="explorer">
+      <div class="explorer-path">📁  \\SERVER-NIIT\Data_Akademik\</div>
+      <div class="toolbar">
+        <button class="action-btn btn-read"    id="btn-read"    onclick="doAction('read')"    disabled>📄 Buka</button>
+        <button class="action-btn btn-write"   id="btn-write"   onclick="doAction('write')"   disabled>✏️ Edit & Simpan</button>
+        <button class="action-btn btn-delete"  id="btn-delete"  onclick="doAction('delete')"  disabled>🗑️ Hapus</button>
+        <button class="action-btn btn-perm"    id="btn-perm"    onclick="doAction('perm')"    disabled>⚙️ Ubah Permission</button>
+        <button class="action-btn btn-adduser" id="btn-adduser" onclick="openModal()"         disabled>👤 + Tambah User Dosen</button>
+      </div>
+      <div class="file-list" id="file-list">
+        <div class="empty-state">🔒<br>Login terlebih dahulu untuk mengakses folder</div>
+      </div>
+    </div>
+
+    <div class="log-grid">
+      <div>
+        <div class="log-label" style="color:#58a6ff">📋 Syslog Server — Semua Log</div>
+        <div class="log-panel" id="syslog">
+          <div class="log-line"><span class="lt">[SYSTEM]</span> <span class="lin">AAA Framework Simulator aktif — menunggu login...</span></div>
+        </div>
+        <div class="log-note">Semua event dikirim real-time ke SIEM. User tidak melihat panel ini.</div>
+      </div>
+      <div>
+        <div class="log-label" style="color:#f97316">🚨 SIEM Console — Security Team Only</div>
+        <div class="log-panel siem-border" id="siem">
+          <div class="log-line"><span class="lt">[SIEM]</span> <span class="lt">Menerima stream dari Syslog — monitoring aktif...</span></div>
+        </div>
+        <div class="log-note">SIEM menerima semua log + mendeteksi anomali secara otomatis.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Result popup -->
+<div class="result-popup" id="rpopup">
+  <div class="result-title" id="rtitle"></div>
+  <div id="rdetail" style="color:#555;line-height:1.5"></div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3>👤 Tambah User Dosen Baru</h3>
+    <p class="modal-sub">Fitur Admin IT: Buat akun baru dan assign ke Group_Dosen</p>
+    <label>Nama User</label>
+    <input type="text" id="new-name" placeholder="contoh: Dosen_Rini" maxlength="20">
+    <label>Group yang akan di-assign</label>
+    <div class="group-box">✓ Group_Dosen — Permission: Read + Write (Modify)</div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Batal</button>
+      <button class="btn-confirm" onclick="confirmAdd()">Buat & Assign Group</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const USERS = {
+  dosen: { name:'Dosen_Aris', role:'DOSEN',     group:'Group_Dosen',     perms:{read:1,write:1,delete:0,perm:0} },
+  mhs:   { name:'Mhs_Budi',  role:'MAHASISWA',  group:'Group_Mahasiswa', perms:{read:1,write:0,delete:0,perm:0} },
+  admin: { name:'Admin_IT',  role:'ADMIN IT',   group:'Group_Admin',     perms:{read:1,write:0,delete:1,perm:1} },
+};
+
+const FILES = [
+  { name:'Nilai_Semester_Ganjil_2025.xlsx', icon:'📊', size:'1.2 MB', owner:'Dosen_Aris' },
+  { name:'Daftar_Hadir_Kelas_A.docx',       icon:'📝', size:'340 KB', owner:'Dosen_Aris' },
+  { name:'Jadwal_UTS_2025.pdf',             icon:'📋', size:'890 KB', owner:'Admin_IT'   },
+  { name:'Rekap_Tugas_Mahasiswa.xlsx',       icon:'📊', size:'2.1 MB', owner:'Dosen_Aris' },
+  { name:'Kebijakan_Akademik.pdf',           icon:'📄', size:'450 KB', owner:'Admin_IT'   },
+];
+
+let users = {...USERS};
+let cur = null, selKey = null, selFile = FILES[0], denied = 0, ptimer = null;
+
+function ts() { return new Date().toLocaleTimeString('id-ID',{hour12:false}); }
+
+function sysAdd(cls, msg) {
+  const c = document.getElementById('syslog');
+  const d = document.createElement('div');
+  d.className = 'log-line';
+  d.innerHTML = `<span class="lt">[${ts()}]</span> <span class="${cls}">${msg}</span>`;
+  c.appendChild(d); c.scrollTop = c.scrollHeight;
+}
+
+function siemAdd(cls, msg) {
+  const c = document.getElementById('siem');
+  const d = document.createElement('div');
+  d.className = 'log-line';
+  d.innerHTML = `<span class="lt">[${ts()}]</span> <span class="${cls}">${msg}</span>`;
+  c.appendChild(d); c.scrollTop = c.scrollHeight;
+}
+
+// Setiap log masuk ke Syslog DAN ke SIEM
+function log(cls, msg, siemCls) {
+  sysAdd(cls, msg);
+  siemAdd(siemCls || cls, msg);
+}
+
+function popup(type, title, detail) {
+  const p = document.getElementById('rpopup');
+  const t = document.getElementById('rtitle');
+  t.textContent = title;
+  t.className = 'result-title ' + (type === 'granted' ? 'rt-ok' : 'rt-err');
+  document.getElementById('rdetail').textContent = detail;
+  p.className = 'result-popup show ' + type;
+  if (ptimer) clearTimeout(ptimer);
+  ptimer = setTimeout(() => p.classList.remove('show'), 4000);
+}
+
+function renderFiles(key) {
+  const isNew = key.startsWith('new_');
+  const ek = isNew ? 'dosen' : key;
+  const label = {dosen:'Read/Write', mhs:'Read Only', admin:'Read/Del/Admin'}[ek] || 'Read/Write';
+  const bc = ek === 'dosen' ? 'fp-rw' : 'fp-ro';
+  document.getElementById('file-list').innerHTML = FILES.map((f,i) =>
+    `<div class="file-item${i===0?' selected':''}" id="fi${i}" onclick="pickFile(${i})">
+      <span class="file-icon">${f.icon}</span>
+      <div><div class="file-name">${f.name}</div><div class="file-meta">${f.size} · ${f.owner}</div></div>
+      <span class="file-perm ${bc}">${label}</span>
+    </div>`).join('');
+}
+
+function pickFile(i) {
+  document.querySelectorAll('.file-item').forEach(e => e.classList.remove('selected'));
+  document.getElementById('fi'+i).classList.add('selected');
+  selFile = FILES[i];
+}
+
+function selectUser(key) {
+  selKey = key;
+  document.querySelectorAll('.user-card').forEach(c => c.classList.remove('active'));
+  const card = document.getElementById('card-'+key);
+  if (card) card.classList.add('active');
+  const btn = document.getElementById('login-btn');
+  btn.disabled = false;
+  btn.textContent = 'Login sebagai ' + users[key].name;
+}
+
+function doLogin() {
+  if (!selKey) return;
+  cur = users[selKey]; denied = 0;
+  document.getElementById('sdot').classList.add('online');
+  document.getElementById('stext').innerHTML =
+    `Login: <span class="logged-in">${cur.name}</span> &nbsp;|&nbsp; Role: <strong>${cur.role}</strong> &nbsp;|&nbsp; ${cur.group}`;
+  ['btn-read','btn-write','btn-delete','btn-perm'].forEach(id => document.getElementById(id).disabled = false);
+  document.getElementById('btn-adduser').disabled = cur.role !== 'ADMIN IT';
+  renderFiles(selKey); selFile = FILES[0];
+  const ip = `192.168.${1+Math.floor(Math.random()*5)}.${10+Math.floor(Math.random()*50)}`;
+  log('lok', `AUTH_SUCCESS: '${cur.name}' login  IP:${ip}`);
+  log('lin', `AUTHZ: Role '${cur.role}' dimuat — Group: ${cur.group}`);
+}
+
+function denyReason(action) {
+  if (action==='write') {
+    if (cur.role==='MAHASISWA') return 'Group_Mahasiswa hanya punya izin Read. Write/Modify tidak diizinkan untuk role ini.';
+    if (cur.role==='ADMIN IT')  return 'Admin IT tidak berwenang mengubah konten akademik. Separation of Duties: Admin kelola sistem, Dosen kelola data akademik.';
+  }
+  if (action==='delete') return 'Delete memerlukan izin yang hanya dimiliki Group_Admin.';
+  if (action==='perm')   return 'Ubah Permission adalah hak eksklusif Administrator (Group_Admin).';
+  return 'Akses ditolak.';
+}
+
+const grantMsg = {
+  read:   f => `File "${f.name}" berhasil dibuka.`,
+  write:  f => `File "${f.name}" berhasil diedit dan disimpan. Perubahan tercatat di audit log.`,
+  delete: f => `File "${f.name}" berhasil dihapus. Aksi tidak dapat diurungkan.`,
+  perm:   f => `Permission folder berhasil diubah.`,
+};
+
+function doAction(action) {
+  if (!cur) return;
+  const f = selFile || FILES[0];
+  const ok = cur.perms[action === 'perm' ? 'perm' : action];
+  if (ok) {
+    denied = 0;
+    popup('granted', '✅ Access Granted', grantMsg[action](f));
+    log('lok', `${action.toUpperCase()}_OK: '${cur.name}' → '${f.name}'`);
+  } else {
+    denied++;
+    popup('denied', '❌ Access Denied', denyReason(action));
+    log('lfl', `ACCESS_DENIED: '${cur.name}' → ${action.toUpperCase()} '${f.name}' [${denied}x]`);
+    if (denied >= 3) siemAlert();
+  }
+}
+
+function siemAlert() {
+  const ip = `192.168.${1+Math.floor(Math.random()*5)}.${10+Math.floor(Math.random()*50)}`;
+  // Syslog: event biasa diteruskan
+  sysAdd('lwn', `THRESHOLD: '${cur.name}' 3x denied — event diteruskan ke SIEM`);
+  // SIEM: menerima correlation alert (user tidak sadar)
+  siemAdd('lal', `━━━ SIEM ALERT ━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  siemAdd('lal', `⚠️  RULE: Multiple Access Denied Detected`);
+  siemAdd('lfl', `   User  : ${cur.name} (${cur.group})`);
+  siemAdd('lfl', `   IP    : ${ip}`);
+  siemAdd('lfl', `   Pola  : 3x ACCESS_DENIED berturut-turut`);
+  siemAdd('lwn', `   Aksi  : Blokir sesi & investigasi akun`);
+  siemAdd('lal', `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  denied = 0;
+}
+
+function openModal()  { document.getElementById('new-name').value=''; document.getElementById('modal').classList.add('show'); }
+function closeModal() { document.getElementById('modal').classList.remove('show'); }
+
+function confirmAdd() {
+  const raw = document.getElementById('new-name').value.trim();
+  if (!raw) { alert('Nama user tidak boleh kosong.'); return; }
+  const name = raw.replace(/\s+/g,'_');
+  const key  = 'new_' + name.toLowerCase();
+  if (users[key]) { alert('User sudah ada.'); return; }
+
+  // Buat user baru — permission sama dengan Group_Dosen
+  users[key] = { name, role:'DOSEN', group:'Group_Dosen', perms:{read:1,write:1,delete:0,perm:0} };
+
+  // Tambah card
+  const card = document.createElement('div');
+  card.className = 'user-card new-user';
+  card.id = 'card-' + key;
+  card.onclick = () => selectUser(key);
+  card.innerHTML = `<div class="user-name">${name} <span style="font-size:10px;color:#16a34a">✦ Baru</span></div>
+    <div class="user-role-sub">Group_Dosen</div>
+    <span class="role-badge role-new">DOSEN BARU</span>`;
+  document.getElementById('user-list').appendChild(card);
+
+  closeModal();
+
+  // Log ke Syslog & SIEM
+  log('lin', `USER_CREATED: '${name}' dibuat oleh '${cur.name}'`);
+  log('lok', `GROUP_ASSIGN: '${name}' → Group_Dosen (Read+Write)`);
+  siemAdd('lin', `ADMIN_ACTION: '${name}' ditambahkan ke Group_Dosen oleh Admin_IT`);
+
+  popup('granted', '✅ User Berhasil Dibuat',
+    `${name} telah dibuat dan di-assign ke Group_Dosen. Silakan login sebagai ${name} untuk memverifikasi permission-nya.`);
+}
+</script>
+</body>
+</html>

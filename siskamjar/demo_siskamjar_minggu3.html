@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Attack Surface Visualizer — Siskamjar Modul 3</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f0f4f8;color:#1A2A4A;min-height:100vh;overflow:hidden}
+.header{background:#1A2A4A;color:white;padding:11px 20px;display:flex;align-items:center;gap:10px}
+.badge{background:#0D7A8A;font-size:10px;font-weight:bold;padding:2px 7px;border-radius:4px;color:white}
+.header h1{font-size:16px;font-weight:bold}
+.header p{font-size:11px;color:#9fb8d4;margin-top:1px}
+.controls{background:#1E3A5F;padding:8px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.tog-wrap{display:flex;align-items:center;gap:8px;font-size:12px;color:white}
+.tog-track{position:relative;width:48px;height:24px;border-radius:12px;cursor:pointer;transition:background .2s}
+.tog-track.flat{background:#cc4444}
+.tog-track.seg{background:#1a8a3a}
+.tog-thumb{position:absolute;top:2px;width:20px;height:20px;background:white;border-radius:50%;transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.tog-track.flat .tog-thumb{left:2px}
+.tog-track.seg .tog-thumb{left:26px}
+.mode-lbl{font-size:12px;font-weight:bold;padding:3px 10px;border-radius:10px}
+.mode-lbl.flat{background:#cc4444;color:white}
+.mode-lbl.seg{background:#1a8a3a;color:white}
+.atk-btns{display:flex;gap:6px;margin-left:auto}
+.atk-btn{padding:5px 12px;font-size:11px;font-weight:bold;border:none;border-radius:5px;cursor:pointer;opacity:.55;transition:all .15s}
+.atk-btn.active{opacity:1;box-shadow:0 0 8px currentColor}
+.atk-btn.arp{background:#E8593C;color:white}
+.btn-rst{padding:5px 10px;font-size:11px;background:#223;color:#99a;border:1px solid #445;border-radius:5px;cursor:pointer}
+.layout{display:grid;grid-template-columns:1fr 320px;height:calc(100vh - 96px)}
+.cvs-wrap{position:relative;background:#0a1520;overflow:hidden}
+canvas{display:block;width:100%;height:100%}
+.net-lbl{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);color:#aaa;font-size:11px;padding:3px 12px;border-radius:10px;pointer-events:none;white-space:nowrap}
+.dev-tip{position:absolute;background:#1E3A5F;color:white;font-size:11px;padding:5px 10px;border-radius:6px;pointer-events:none;display:none;z-index:10;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.info-panel{background:#0d1117;border-left:1px solid #1e3a5f;display:flex;flex-direction:column}
+.info-hdr{background:#1E3A5F;padding:10px 14px;font-size:11px;font-weight:bold;color:#9fb8d4;text-transform:uppercase;letter-spacing:.8px}
+.info-body{flex:1;overflow-y:auto;padding:12px;padding-bottom:24px}
+.hint{color:#445;font-size:12px;text-align:center;padding:30px 16px;line-height:1.8}
+.hint-icon{font-size:28px;margin-bottom:6px}
+.acard{display:none}
+.acard.show{display:block;animation:fi .3s}
+@keyframes fi{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.ac-ttl{font-size:14px;font-weight:bold;color:white;margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid #1e3a5f}
+.ac-bdg{display:inline-block;font-size:10px;font-weight:bold;padding:2px 7px;border-radius:8px;margin-bottom:8px}
+.ac-row{display:flex;gap:6px;margin-bottom:5px;font-size:11px}
+.ac-lbl{color:#445;min-width:80px;flex-shrink:0}
+.ac-val{color:#ccc;line-height:1.5}
+.mit-box{background:#0a2a1a;border:1px solid #1a5a2a;border-radius:5px;padding:9px 11px;margin-top:9px}
+.mit-ttl{font-size:10px;font-weight:bold;color:#3fb950;margin-bottom:5px}
+.mit-box li{font-size:11px;color:#8fce9f;margin-left:12px;margin-bottom:2px;line-height:1.3}
+.imp-bar{margin-top:10px}
+.imp-lbl{font-size:10px;color:#445;margin-bottom:3px}
+.imp-track{background:#1e2a1e;border-radius:3px;height:7px;overflow:hidden}
+.imp-fill{height:100%;border-radius:3px;transition:width .6s}
+.imp-fill.hi{background:#f85149}.imp-fill.md{background:#d29922}.imp-fill.lo{background:#3fb950}
+.flat-note{background:#2a0808;border:1px solid #5a1a1a;border-radius:5px;padding:7px 10px;margin-top:8px;font-size:11px;color:#f85149;line-height:1.4}
+.seg-note{background:#082a12;border:1px solid #1a5a2a;border-radius:5px;padding:7px 10px;margin-top:8px;font-size:11px;color:#3fb950;line-height:1.4}
+.lgnd{padding:10px 14px;border-top:1px solid #1e3a5f;font-size:10px;color:#445}
+.lgnd-row{display:flex;align-items:center;gap:5px;margin-bottom:3px}
+.ldot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.mitm-note{background:#1a1000;border:1px solid #d2992244;border-radius:5px;padding:7px 10px;margin-top:8px;font-size:11px;color:#d29922;line-height:1.4}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div style="display:flex;align-items:center;gap:9px">
+      <span class="badge">SISKAMJAR</span>
+      <h1>Attack Surface Visualizer</h1>
+    </div>
+    <p>Modul 3 — Vulnerability, Threat & Attack Surface  ·  STTI NIIT Jakarta</p>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="tog-wrap">
+    <span style="color:#f85149;font-weight:bold;font-size:11px">Flat</span>
+    <div class="tog-track flat" id="tog" onclick="toggleMode()">
+      <div class="tog-thumb"></div>
+    </div>
+    <span style="color:#3fb950;font-weight:bold;font-size:11px">Segmented</span>
+  </div>
+  <span class="mode-lbl flat" id="mode-lbl">FLAT NETWORK</span>
+  <span style="color:#9fb8d4;font-size:11px;margin-left:10px">Pilih serangan →</span>
+  <div class="atk-btns">
+    <button class="atk-btn arp" id="btn-arp" onclick="selectAtk('arp')" style="opacity:1;box-shadow:0 0 8px #E8593C">⚡ ARP Spoofing — Klik untuk mulai</button>
+  </div>
+  <button class="btn-rst" onclick="reset()">↺ Reset</button>
+</div>
+
+<div class="layout">
+  <div class="cvs-wrap" id="cwrap">
+    <canvas id="C"></canvas>
+    <div class="net-lbl" id="nlbl">🔴 Flat Network — semua perangkat satu subnet</div>
+    <div class="dev-tip" id="tip"></div>
+  </div>
+  <div class="info-panel">
+    <div class="info-hdr">📊 Info Serangan</div>
+    <div class="info-body">
+      <div class="hint" id="hint">
+        <div class="hint-icon">🖱️</div>
+        Pilih serangan di atas,<br>lalu <strong style="color:#E8593C">klik Laptop Penyerang</strong><br>untuk melancarkan serangan.<br><br>
+        <span style="color:#3fb950">Hijau = aman</span> · <span style="color:#f85149">Merah = terdampak</span>
+      </div>
+      <div class="acard" id="acard"></div>
+    </div>
+    <div class="lgnd">
+      <div class="lgnd-row"><div class="ldot" style="background:#3fb950"></div>Perangkat aman</div>
+      <div class="lgnd-row"><div class="ldot" style="background:#f85149"></div>Terdampak serangan</div>
+      <div class="lgnd-row"><div class="ldot" style="background:#d29922"></div>Penyerang (MitM)</div>
+      <div class="lgnd-row"><div class="ldot" style="background:#F0A500"></div>Trafik pergi (Mhs→Penyerang)</div>
+      <div class="lgnd-row"><div class="ldot" style="background:#3fb950"></div>Reply (Server→Penyerang)</div>
+      <div class="lgnd-row"><div class="ldot" style="background:#4488cc"></div>VLAN Segmentation</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('C');
+const ctx = canvas.getContext('2d');
+
+// ── Devices (fx,fy = fraction of canvas w,h) ─────────────────
+const DEV = {
+  internet: { label:'Internet',        icon:'🌐', type:'cloud',    fx:.50, fy:.07 },
+  router:   { label:'Router / Gateway',  icon:'📡', type:'router',   fx:.50, fy:.20 },
+  // Flat
+  sw_main:  { label:'Switch Utama',    icon:'🔀', type:'switch',   fx:.50, fy:.36 },
+  // Segmented
+  // fw dihapus — diganti konsep VLAN Segmentation (belum dibahas di Modul 3)
+  sw_dosen: { label:'Switch Dosen',    icon:'🔀', type:'switch',   fx:.22, fy:.50 },
+  sw_mhs:   { label:'Switch / AP',     icon:'🔀', type:'switch',   fx:.50, fy:.50 },
+  sw_srv:   { label:'Switch Server',   icon:'🔀', type:'switch',   fx:.78, fy:.50 },
+  // End devices
+  dosen:    { label:'PC Dosen',        icon:'🖥️',  type:'pc',       fx:.22, fy:.70 },
+  admin:    { label:'PC Admin IT',     icon:'🖥️',  type:'pc',       fx:.38, fy:.70 },
+  mhs:      { label:'Laptop Mhs (WiFi)',icon:'💻', type:'laptop',   fx:.50, fy:.72 },
+  attacker: { label:'Laptop Penyerang',icon:'💻', type:'atk',      fx:.63, fy:.70 },
+  server:   { label:'Server e-campus', icon:'🖥️',  type:'server',   fx:.78, fy:.70 },
+
+};
+
+const LINKS_FLAT = [
+  ['internet','router'],['router','sw_main'],
+  ['sw_main','dosen'],['sw_main','admin'],
+  ['sw_main','mhs'],['sw_main','attacker'],
+  ['sw_main','server'],
+];
+const LINKS_SEG = [
+  ['internet','router'],
+  ['router','sw_dosen'],['router','sw_mhs'],['router','sw_srv'],
+  ['sw_dosen','dosen'],['sw_dosen','admin'],
+  ['sw_mhs','mhs'],['sw_mhs','attacker'],
+  ['sw_srv','server'],
+];
+
+const ATTACKS = {
+  arp:{
+    name:'ARP Spoofing', color:'#E8593C',
+    layer:'Layer 2 — Datalink', stride:'Spoofing', cia:'Confidentiality (penyadapan trafik / MitM)',
+    desc:'Penyerang memalsukan MAC Gateway/Router: mengirim ARP Reply palsu ke Mhs — "MAC Gateway = MAC saya". Mhs tertipu dan mengirim semua trafik ke Penyerang. Untuk MitM penuh, penyerang juga memalsukan MAC Mhs ke Gateway. Di flat network kedua arah berhasil. Di segmented, penyerang bisa menipu Mhs dalam VLAN 20, tapi tidak bisa forward ke Server di VLAN lain.',
+    mitigasi:['Dynamic ARP Inspection (DAI) pada switch manageable','Port Security — batasi MAC per port','Enkripsi end-to-end dengan HTTPS/TLS'],
+    atk_node:'attacker', victim:'mhs',
+    flat_affected:['dosen','admin','mhs','sw_main','server','dns'],
+    seg_affected:['mhs'],
+    impact_flat:90, impact_seg:20,
+    has_anim: true,   // animasi MitM
+  },
+
+
+};
+
+// ── State ─────────────────────────────────────────────────────
+let isFlat = true, selAtk = null, affected = new Set();
+let packets = [];   // animated packets [{x,y,tx,ty,prog,col,phase,path}]
+let animId = null;
+
+function W(){ return canvas.width; }
+function H(){ return canvas.height; }
+function pos(id){ const d=DEV[id]; return {x:d.fx*W(), y:d.fy*H()}; }
+function rad(id){ const t=DEV[id].type; return t==='cloud'?26:t==='firewall'?20:t==='router'?18:t==='switch'?14:t==='server'?17:15; }
+
+function visNodes(){
+  return isFlat
+    ? ['internet','router','sw_main','dosen','admin','mhs','attacker','server']
+    : ['internet','router','sw_dosen','sw_mhs','sw_srv','dosen','admin','mhs','attacker','server'];
+}
+
+function nodeCol(id){
+  // Cloud tidak pernah terdampak
+  if(DEV[id].type==='cloud') return '#223';
+  if(id==='attacker' && selAtk) return '#d29922';
+  if(affected.has(id)) return ATTACKS[selAtk]?.color || '#f85149';
+  return '#1a5a3a';
+}
+
+// ── Draw ──────────────────────────────────────────────────────
+function draw(){
+  ctx.clearRect(0,0,W(),H());
+
+  // subtle grid
+  ctx.strokeStyle='rgba(255,255,255,0.018)'; ctx.lineWidth=1;
+  for(let x=0;x<W();x+=36){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H());ctx.stroke();}
+  for(let y=0;y<H();y+=36){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W(),y);ctx.stroke();}
+
+  const links = isFlat ? LINKS_FLAT : LINKS_SEG;
+  const vis = visNodes();
+
+  // Zones in segmented mode
+  if(!isFlat){
+    drawZone(.04,.38,.40,.82,'Zona Dosen / Admin (VLAN 10)','rgba(30,100,60,.10)','rgba(40,160,80,.35)');
+    drawZone(.38,.38,.72,.82,'Zona Mahasiswa (VLAN 20)','rgba(100,30,30,.10)','rgba(180,60,60,.35)');
+    drawZone(.70,.38,.98,.82,'Zona Server (VLAN 30)','rgba(20,40,100,.10)','rgba(50,80,180,.35)');
+  }
+
+  // Links
+  links.forEach(([a,b])=>{
+    if(!vis.includes(a)||!vis.includes(b)) return;
+    const pa=pos(a), pb=pos(b);
+    const hot=(affected.has(a)||affected.has(b))&&selAtk;
+    ctx.beginPath(); ctx.moveTo(pa.x,pa.y); ctx.lineTo(pb.x,pb.y);
+    ctx.strokeStyle=hot?(ATTACKS[selAtk].color+'77'):'rgba(80,120,160,.22)';
+    ctx.lineWidth=hot?2:1.5; ctx.setLineDash(hot?[]:[4,4]);
+    ctx.stroke(); ctx.setLineDash([]);
+  });
+
+  // Nodes
+  vis.forEach(id=>{
+    const d=DEV[id], p=pos(id), r=rad(id), col=nodeCol(id);
+    // glow
+    if(affected.has(id)||id==='attacker'&&selAtk){
+      const g=ctx.createRadialGradient(p.x,p.y,r,p.x,p.y,r+12);
+      const gc=id==='attacker'?'#d29922':(ATTACKS[selAtk]?.color||'#f85149');
+      g.addColorStop(0,gc+'44'); g.addColorStop(1,'transparent');
+      ctx.beginPath(); ctx.arc(p.x,p.y,r+12,0,Math.PI*2);
+      ctx.fillStyle=g; ctx.fill();
+    }
+    // circle
+    ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2);
+    ctx.fillStyle=col; ctx.fill();
+    ctx.strokeStyle=col==='#1a5aaa'?'#66aaee':col==='#1a5a3a'?'#3fb950':'#fff3';
+    ctx.lineWidth=1.8; ctx.stroke();
+    // icon
+    ctx.font=`${r*1.15}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(d.icon,p.x,p.y);
+    // label — shorter, no overlap
+    ctx.font='10px Arial';
+    ctx.fillStyle=affected.has(id)?'#ffaaaa':(id==='attacker'&&selAtk?'#ffd700':'#8fb8d4');
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText(d.label,p.x,p.y+r+3);
+  });
+
+  // Animated packets
+  packets.forEach(pk=>{
+    ctx.beginPath();
+    ctx.arc(pk.x,pk.y,5,0,Math.PI*2);
+    ctx.fillStyle=pk.col;
+    ctx.shadowBlur=8; ctx.shadowColor=pk.col;
+    ctx.fill();
+    ctx.shadowBlur=0;
+    // direction arrow tip
+    const ang=Math.atan2(pk.ty-pk.sy,pk.tx-pk.sx);
+    ctx.beginPath();
+    ctx.moveTo(pk.x+Math.cos(ang)*6,pk.y+Math.sin(ang)*6);
+    ctx.lineTo(pk.x+Math.cos(ang+2.4)*4,pk.y+Math.sin(ang+2.4)*4);
+    ctx.lineTo(pk.x+Math.cos(ang-2.4)*4,pk.y+Math.sin(ang-2.4)*4);
+    ctx.closePath();
+    ctx.fillStyle=pk.col; ctx.fill();
+  });
+}
+
+function drawZone(x1f,y1f,x2f,y2f,lbl,fill,stroke){
+  const x1=x1f*W(),y1=y1f*H(),x2=x2f*W(),y2=y2f*H();
+  ctx.fillStyle=fill; ctx.strokeStyle=stroke;
+  ctx.lineWidth=1.5; ctx.setLineDash([5,3]);
+  ctx.beginPath(); ctx.roundRect(x1,y1,x2-x1,y2-y1,10);
+  ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+  ctx.font='bold 10px Arial'; ctx.fillStyle=stroke;
+  ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillText(lbl,x1+7,y1+5);
+}
+
+// ── Packet animation ─────────────────────────────────────────
+function launchPackets(atkType){
+  packets=[];
+  const atk=ATTACKS[atkType];
+  if(!atk.has_anim){
+    const src=pos(atk.atk_node), dst=pos(atk.victim);
+    for(let i=0;i<6;i++){
+      packets.push({sx:src.x,sy:src.y,tx:dst.x,ty:dst.y,x:src.x,y:src.y,
+        prog:i*(1/6),col:atk.color,loop:true,done:false});
+    }
+  } else {
+    const victim=pos(atk.victim), atkr=pos(atk.atk_node), srv=pos('server');
+    const N=5;
+    if(isFlat){
+      // FLAT: 4 stream — MitM penuh via Gateway spoofing
+      // Stream A kuning:  Mhs → Penyerang (trafik pergi)
+      // Stream B merah:   Penyerang → Server (diteruskan ke server)
+      // Stream C hijau:   Server → Penyerang (reply dari server)
+      // Stream D oranye:  Penyerang → Mhs (reply diteruskan ke korban)
+      for(let i=0;i<N;i++){
+        // Pergi: Mhs → Penyerang (mengira Gateway)
+        packets.push({sx:victim.x,sy:victim.y,tx:atkr.x,ty:atkr.y,
+          x:victim.x,y:victim.y,prog:i/N,col:'#F0A500',loop:true,done:false});
+        // Pergi: Penyerang → Server
+        packets.push({sx:atkr.x,sy:atkr.y,tx:srv.x,ty:srv.y,
+          x:atkr.x,y:atkr.y,prog:((i/N)+0.4)%1,col:'#E8593C',loop:true,done:false});
+        // Balik: Server → Penyerang
+        packets.push({sx:srv.x,sy:srv.y,tx:atkr.x,ty:atkr.y,
+          x:srv.x,y:srv.y,prog:((i/N)+0.2)%1,col:'#3fb950',loop:true,done:false});
+        // Balik: Penyerang → Mhs
+        packets.push({sx:atkr.x,sy:atkr.y,tx:victim.x,ty:victim.y,
+          x:atkr.x,y:atkr.y,prog:((i/N)+0.6)%1,col:'#58b4ff',loop:true,done:false});
+      }
+    } else {
+      // SEGMENTED:
+      // 🟡 Kuning: Mhs→Penyerang — korban TERTIPU, trafik masuk ke penyerang
+      // ❌ Tidak ada stream ke Server — VLAN boundary blokir ARP palsu ke Server
+      // Efek: trafik Mhs nyangkut di Penyerang, tidak sampai ke Server → koneksi PUTUS
+      for(let i=0;i<N;i++){
+        packets.push({sx:victim.x,sy:victim.y,tx:atkr.x,ty:atkr.y,
+          x:victim.x,y:victim.y,prog:i/N,col:'#F0A500',loop:true,done:false});
+      }
+    }
+  }
+  runAnim();
+}
+
+function runAnim(){
+  if(animId) cancelAnimationFrame(animId);
+  const step=()=>{
+    packets.forEach(pk=>{
+      if(pk.done) return;
+      pk.prog+=0.016;
+      if(pk.prog>=1){
+        if(pk.loop) pk.prog-=1;
+        else { pk.done=true; return; }
+      }
+      pk.x=pk.sx+(pk.tx-pk.sx)*pk.prog;
+      pk.y=pk.sy+(pk.ty-pk.sy)*pk.prog;
+    });
+    packets=packets.filter(p=>!p.done);
+    draw();
+    if(packets.length>0) animId=requestAnimationFrame(step);
+  };
+  animId=requestAnimationFrame(step);
+}
+
+
+// ── Controls ──────────────────────────────────────────────────
+function toggleMode(){
+  isFlat=!isFlat;
+  const t=document.getElementById('tog');
+  const ml=document.getElementById('mode-lbl');
+  const nl=document.getElementById('nlbl');
+  t.className='tog-track '+(isFlat?'flat':'seg');
+  ml.className='mode-lbl '+(isFlat?'flat':'seg');
+  ml.textContent=isFlat?'FLAT NETWORK':'VLAN SEGMENTED';
+  nl.textContent=isFlat
+    ?'🔴 Flat Network — semua perangkat satu subnet'
+    :'🟢 Segmented — VLAN antar zona (Switch Manageable)';
+  reset();
+}
+
+function selectAtk(type){
+  selAtk=type;
+  document.getElementById('btn-arp').classList.toggle('active', type==='arp');
+  affected.clear(); packets=[];
+  if(animId){cancelAnimationFrame(animId);animId=null;}
+  document.getElementById('hint').style.display='block';
+  document.getElementById('hint').innerHTML=
+    `<div class="hint-icon">⚡</div>`+
+    `Klik <strong style="color:#d29922">Laptop Penyerang</strong><br>untuk melancarkan<br><strong style="color:${ATTACKS[type].color}">${ATTACKS[type].name}</strong>`;
+  document.getElementById('acard').classList.remove('show');
+  draw();
+}
+
+function reset(){
+  selAtk=null; affected.clear(); packets=[];
+  if(animId){cancelAnimationFrame(animId);animId=null;}
+  document.getElementById('btn-arp').classList.remove('active');
+  document.getElementById('hint').style.display='block';
+  document.getElementById('hint').innerHTML=
+    '<div class="hint-icon">⚡</div>Klik <strong style="color:#d29922">Laptop Penyerang</strong><br>untuk melancarkan<br><strong style="color:#E8593C">ARP Spoofing</strong><br><br><span style="color:#3fb950">Hijau = aman</span> · <span style="color:#f85149">Merah = terdampak</span>';
+  document.getElementById('acard').classList.remove('show');
+  draw();
+}
+
+// Click handler
+canvas.addEventListener('click',e=>{
+  if(!selAtk) return;
+  const rect=canvas.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)*(W()/rect.width);
+  const my=(e.clientY-rect.top)*(H()/rect.height);
+  const atk=ATTACKS[selAtk];
+  visNodes().forEach(id=>{
+    const p=pos(id), r=rad(id)+8;
+    if(Math.hypot(mx-p.x,my-p.y)<r && id==='attacker'){
+      affected.clear();
+      const list=isFlat?atk.flat_affected:atk.seg_affected;
+      list.forEach(n=>affected.add(n));
+      launchPackets(selAtk);
+      showInfo(selAtk);
+    }
+  });
+});
+
+// Hover
+canvas.addEventListener('mousemove',e=>{
+  const rect=canvas.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)*(W()/rect.width);
+  const my=(e.clientY-rect.top)*(H()/rect.height);
+  const tt=document.getElementById('tip');
+  let found=false;
+  visNodes().forEach(id=>{
+    const p=pos(id), r=rad(id)+8;
+    if(Math.hypot(mx-p.x,my-p.y)<r){
+      const isClk=selAtk&&id==='attacker';
+      tt.style.display='block';
+      tt.style.left=(e.clientX-rect.left+12)+'px';
+      tt.style.top=(e.clientY-rect.top-28)+'px';
+      tt.textContent=isClk?`⚡ Klik untuk serang!`:DEV[id].label;
+      canvas.style.cursor=isClk?'pointer':'default';
+      found=true;
+    }
+  });
+  if(!found){tt.style.display='none';canvas.style.cursor='default';}
+});
+
+function showInfo(type){
+  const atk=ATTACKS[type];
+  const imp=isFlat?atk.impact_flat:atk.impact_seg;
+  const ic=imp>70?'hi':imp>40?'md':'lo';
+  const ilbl=imp>70?'🔴 TINGGI':imp>40?'🟡 SEDANG':'🟢 RENDAH';
+  const note=isFlat
+    ?`<div class="flat-note">⚠️ <strong>Flat Network:</strong> Tidak ada segmentasi — serangan menyebar ke seluruh broadcast domain. Semua perangkat rentan.</div>`
+    :`<div class="seg-note">⚠️ <strong>VLAN Boundary:</strong> Mhs tertipu — mengira MAC Penyerang adalah MAC Gateway, sehingga trafik dikirim ke Penyerang (🟡). Penyerang tidak bisa forward ke Server karena untuk meneruskan ke VLAN 30, ia perlu menipu Gateway juga — tapi ARP palsu dari Penyerang tidak bisa keluar VLAN 20. Trafik nyangkut → koneksi Mhs ke Server <strong>putus</strong> (efek DoS).</div>`;
+  const mitm=(type==='arp' && isFlat)
+    ?`<div class="mitm-note">🔀 <strong>Man-in-the-Middle:</strong> Penyerang kirim dua ARP palsu: ke Mhs — 'MAC Gateway = MAC saya', ke Gateway — 'MAC Mhs = MAC saya'. Semua trafik dua arah melewati penyerang: 🟡 Mhs→Penyerang (mengira gateway), 🔴 Penyerang→Server (diteruskan), 🟢 Server→Penyerang (reply), 🔵 Penyerang→Mhs (reply diteruskan). Korban tidak sadar.</div>`
+    :(type==='arp' && !isFlat)
+    ?`<div class="seg-note">🛡️ <strong>VLAN Boundary:</strong> Mhs tertipu — mengira MAC Penyerang adalah MAC Gateway, trafik masuk ke Penyerang (🟡). Untuk MitM penuh, Penyerang perlu menipu Gateway juga agar bisa forward ke Server. Tapi ARP broadcast dari Penyerang tidak bisa keluar VLAN 20 — Gateway tidak tertipu. Trafik nyangkut di Penyerang, koneksi putus (efek DoS bukan MitM).</div>`
+    :'';
+  document.getElementById('hint').style.display='none';
+  const card=document.getElementById('acard');
+  card.innerHTML=`
+    <div class="ac-ttl">${atk.name}</div>
+    <span class="ac-bdg" style="background:${atk.color}22;color:${atk.color};border:1px solid ${atk.color}44">${atk.layer}</span>
+    <div class="ac-row"><span class="ac-lbl">STRIDE</span><span class="ac-val" style="color:#f97316;font-weight:bold">${atk.stride}</span></div>
+    <div class="ac-row"><span class="ac-lbl">CIA</span><span class="ac-val">${atk.cia}</span></div>
+    <div class="ac-row"><span class="ac-lbl">Mekanisme</span><span class="ac-val">${atk.desc}</span></div>
+    ${mitm}
+    <div class="imp-bar">
+      <div class="imp-lbl">Dampak ${isFlat?'Flat':'Segmented'}: <strong style="color:${ic==='hi'?'#f85149':ic==='md'?'#d29922':'#3fb950'}">${ilbl} (${imp}%)</strong></div>
+      <div class="imp-track"><div class="imp-fill ${ic}" style="width:${imp}%"></div></div>
+    </div>
+    ${note}
+    <div class="mit-box"><div class="mit-ttl">🛡️ Mitigasi</div><ul>${atk.mitigasi.map(m=>`<li>${m}</li>`).join('')}</ul></div>`;
+  card.classList.add('show');
+}
+
+// Resize
+function resize(){
+  const w=document.getElementById('cwrap');
+  canvas.width=w.clientWidth; canvas.height=w.clientHeight;
+  draw();
+}
+window.addEventListener('resize',resize);
+resize();
+// Auto-pilih ARP saat halaman dibuka
+selectAtk('arp');
+</script>
+</body>
+</html>

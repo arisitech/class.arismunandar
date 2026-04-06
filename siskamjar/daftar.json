@@ -1,0 +1,20 @@
+{
+  "sebelum_uts": [
+    { "minggu": 2, "demo": 0, "file": "demo_siskamjar_minggu2.html" },
+    { "minggu": 3, "demo": 1, "file": "demo_siskamjar_minggu3.html" },
+    { "minggu": 3, "demo": 2, "file": "demo2_siskamjar_minggu3.html" },
+    { "minggu": 4, "demo": 0, "file": "demo_siskamjar_minggu4.html" },
+    { "minggu": 5, "demo": 0, "file": "" },
+    { "minggu": 6, "demo": 0, "file": "" },
+    { "minggu": 7, "demo": 0, "file": "" }
+  ],
+  "setelah_uts": [
+    { "minggu": 9,  "demo": 0, "file": "" },
+    { "minggu": 10, "demo": 0, "file": "" },
+    { "minggu": 11, "demo": 0, "file": "" },
+    { "minggu": 12, "demo": 0, "file": "" },
+    { "minggu": 13, "demo": 0, "file": "" },
+    { "minggu": 14, "demo": 0, "file": "" },
+    { "minggu": 15, "demo": 0, "file": "" }
+  ]
+}

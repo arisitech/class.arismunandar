@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo Bit Masking — Sensor Gerak & Lampu Kost</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Nunito:wght@400;600;700;800;900&display=swap');
+
+:root {
+  --navy:   #0f1923;
+  --dark:   #1a2535;
+  --card:   #1e2d42;
+  --border: #2a3f5a;
+  --blue:   #3b82f6;
+  --cyan:   #22d3ee;
+  --green:  #10b981;
+  --amber:  #f59e0b;
+  --red:    #ef4444;
+  --text:   #e2e8f0;
+  --muted:  #64748b;
+  --mono:   'JetBrains Mono', monospace;
+  --sans:   'Nunito', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--sans); background: var(--navy); color: var(--text); min-height: 100vh; }
+
+/* HEADER */
+.header {
+  background: linear-gradient(135deg, #0f1923 0%, #1a2d4a 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 28px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.header h1 { font-size: 17px; font-weight: 900; color: var(--cyan); }
+.header p  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.header-badge {
+  background: var(--blue); color: white;
+  font-size: 11px; font-weight: 700;
+  padding: 5px 14px; border-radius: 20px;
+}
+
+/* LAYOUT */
+.main { max-width: 1000px; margin: 0 auto; padding: 24px 18px 60px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+@media (max-width: 680px) { .grid { grid-template-columns: 1fr; } }
+
+/* CARD */
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 18px 20px;
+}
+.card-title {
+  font-size: 11px; font-weight: 800; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 14px; display: flex; align-items: center; gap: 6px;
+}
+
+/* KAMAR */
+.kamar-wrap {
+  background: linear-gradient(180deg, #0d1a0d 0%, #0a140a 100%);
+  border: 1px solid #1a3a1a; border-radius: 12px;
+  padding: 18px; display: flex; flex-direction: column;
+  align-items: center; gap: 14px;
+  position: relative; overflow: hidden;
+}
+.cahaya {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 12px; pointer-events: none; transition: all 0.6s;
+}
+.cahaya.nyala {
+  background: radial-gradient(ellipse at 50% 10%, rgba(253,224,71,0.12) 0%, transparent 65%);
+}
+
+/* LAMPU */
+.lampu-bulb {
+  width: 64px; height: 64px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 34px; transition: all 0.5s; position: relative; z-index: 1;
+}
+.lampu-bulb.nyala {
+  background: radial-gradient(circle, #fef9c3, #fde047, #eab308);
+  box-shadow: 0 0 32px 16px rgba(253,224,71,0.45), 0 0 64px 32px rgba(253,224,71,0.15);
+  animation: flicker 3s ease-in-out infinite;
+}
+.lampu-bulb.mati { background: #1e2d42; box-shadow: none; }
+@keyframes flicker {
+  0%,100% { box-shadow: 0 0 32px 16px rgba(253,224,71,0.45), 0 0 64px 32px rgba(253,224,71,0.15); }
+  50%      { box-shadow: 0 0 38px 20px rgba(253,224,71,0.55), 0 0 72px 36px rgba(253,224,71,0.2); }
+}
+.lampu-label {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.5px;
+  transition: color 0.4s;
+}
+
+/* RUANGAN */
+.ruangan {
+  width: 100%; border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px; display: flex; flex-direction: column;
+  align-items: center; gap: 14px; transition: all 0.5s;
+  background: linear-gradient(180deg, #1a2535 0%, #111b27 100%);
+  position: relative; z-index: 1;
+}
+.ruangan.terang {
+  background: linear-gradient(180deg, #22382a 0%, #162418 100%);
+  border-color: #2a5a3a;
+}
+
+/* ORANG */
+.orang-icon {
+  font-size: 52px; transition: all 0.4s;
+}
+.orang-icon.ada { filter: brightness(1); }
+.orang-icon.tidak-ada { opacity: 0.2; filter: grayscale(1); }
+.orang-label { font-size: 11px; color: var(--muted); font-weight: 700; }
+
+/* TOMBOL SENSOR */
+.sensor-btn {
+  width: 100%; background: none; border: 2px solid var(--border);
+  border-radius: 10px; padding: 13px 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; font-family: var(--sans); transition: all 0.2s;
+}
+.sensor-btn:hover { border-color: var(--amber); background: rgba(245,158,11,0.05); }
+.sensor-btn:active { transform: scale(0.98); }
+.sensor-icon { font-size: 26px; }
+.sensor-text { font-size: 14px; font-weight: 800; color: var(--text); }
+.sensor-chip {
+  font-size: 11px; font-weight: 700; padding: 4px 12px;
+  border-radius: 20px; transition: all 0.3s;
+}
+.sensor-chip.gerak { background: rgba(245,158,11,0.15); color: var(--amber); }
+.sensor-chip.diam  { background: rgba(100,116,139,0.15); color: var(--muted); }
+
+/* PANEL BITMASK */
+.bm-panel {
+  width: 100%; background: #080f18; border: 1px solid var(--border);
+  border-radius: 10px; padding: 13px 16px; position: relative; z-index: 1;
+}
+.bm-title {
+  font-size: 10px; font-weight: 800; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;
+}
+.bm-formula {
+  display: flex; align-items: center; gap: 6px;
+  justify-content: center; flex-wrap: wrap; margin-bottom: 10px;
+}
+.bm-val {
+  text-align: center;
+}
+.bm-val-label {
+  font-size: 9px; color: var(--muted); margin-bottom: 3px;
+}
+.bm-val-box {
+  font-family: var(--mono); font-size: 12px; font-weight: 700;
+  background: #1e2d42; border-radius: 6px; padding: 6px 10px;
+  letter-spacing: 2px; border: 1px solid var(--border);
+  transition: all 0.4s;
+}
+.bm-op {
+  font-size: 14px; font-weight: 900; padding-top: 14px; color: var(--blue);
+}
+.bm-op.eq { color: var(--muted); }
+.bm-result-box {
+  font-size: 12px; font-weight: 700; text-align: center;
+  padding: 8px 12px; border-radius: 8px; border: 1px solid;
+  transition: all 0.5s;
+}
+.bm-result-box.nyala {
+  background: rgba(16,185,129,0.1); color: var(--green);
+  border-color: rgba(16,185,129,0.3);
+}
+.bm-result-box.mati {
+  background: rgba(239,68,68,0.08); color: var(--red);
+  border-color: rgba(239,68,68,0.2);
+}
+.bm-note {
+  font-size: 10px; color: var(--muted); text-align: center;
+  margin-top: 8px; line-height: 1.6;
+}
+
+/* PROSES CPU (kanan) */
+.proses-section { display: flex; flex-direction: column; gap: 12px; }
+
+/* Register */
+.reg-block {
+  background: #080f18; border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px;
+}
+.reg-label {
+  font-size: 10px; font-weight: 800; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;
+}
+.bits-row { display: flex; gap: 3px; }
+.bit-box {
+  flex: 1; aspect-ratio: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  border-radius: 6px; border: 1.5px solid var(--border);
+  font-family: var(--mono); font-size: 14px; font-weight: 700;
+  transition: all 0.4s; position: relative;
+}
+.bit-box .bp { position: absolute; bottom: 2px; font-size: 8px; color: var(--muted); font-weight: 400; }
+.bit-box.b0    { background: #0f1923; color: var(--muted); }
+.bit-box.bgerak{ background: rgba(245,158,11,0.15); color: var(--amber); border-color: var(--amber); }
+.bit-box.bmask { background: rgba(59,130,246,0.2);  color: var(--blue);  border-color: var(--blue); }
+.bits-legend { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+.leg { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); }
+.leg-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+/* AND step */
+.and-step {
+  display: grid; grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: center; gap: 6px;
+}
+.and-op-box {
+  background: #080f18; border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px; text-align: center;
+}
+.and-op-label { font-size: 9px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; }
+.and-op-val { font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: 1px; }
+.and-sym { font-size: 18px; font-weight: 900; color: var(--blue); }
+.and-sym.eq { color: var(--muted); }
+.and-result {
+  background: #080f18; border: 2px solid var(--green);
+  border-radius: 8px; padding: 10px; text-align: center;
+  box-shadow: 0 0 10px rgba(16,185,129,0.15); transition: all 0.4s;
+}
+.and-result .and-op-label { color: var(--green); }
+.and-result .and-op-val { color: var(--green); transition: all 0.4s; }
+
+/* Keputusan */
+.keputusan {
+  border-radius: 10px; padding: 14px 16px;
+  display: flex; align-items: center; gap: 12px;
+  border: 1px solid; transition: all 0.5s;
+}
+.keputusan.nyala { background: rgba(16,185,129,0.1); border-color: var(--green); }
+.keputusan.mati  { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.3); }
+.kep-icon { font-size: 28px; }
+.kep-title { font-size: 14px; font-weight: 800; }
+.keputusan.nyala .kep-title { color: var(--green); }
+.keputusan.mati  .kep-title { color: var(--red); }
+.kep-desc { font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.5; }
+
+/* LOG */
+.log-area {
+  background: #080f18; border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px;
+  font-family: var(--mono); font-size: 11px;
+  min-height: 58px; max-height: 108px; overflow-y: auto;
+}
+.log-line { margin-bottom: 4px; line-height: 1.5; }
+.log-line.new { animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(3px); } to { opacity:1; } }
+.lt  { color: var(--muted); }
+.li  { color: var(--amber); }
+.lc  { color: var(--cyan); }
+.la  { color: var(--green); font-weight: 700; }
+.lao { color: var(--red); font-weight: 700; }
+
+/* TABEL */
+.cond-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.cond-table th {
+  background: #0f1923; color: var(--muted); padding: 8px 12px;
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px;
+  font-weight: 700; border-bottom: 1px solid var(--border); text-align: left;
+}
+.cond-table td { padding: 9px 12px; border-bottom: 1px solid rgba(42,63,90,0.4); vertical-align: middle; }
+.cond-table tr.active td { background: rgba(59,130,246,0.07); }
+.cond-table tr.active td:first-child { border-left: 3px solid var(--blue); padding-left: 9px; }
+.chip { display:inline-block; border-radius:4px; padding:2px 8px; font-size:10px; font-weight:700; }
+.chip-green { background:rgba(16,185,129,0.15); color:var(--green); }
+.chip-red   { background:rgba(239,68,68,0.15);  color:var(--red); }
+.chip-amber { background:rgba(245,158,11,0.15);  color:var(--amber); }
+.chip-gray  { background:rgba(100,116,139,0.15); color:var(--muted); }
+.mono { font-family:var(--mono); font-size:11px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>🏠 Sistem Lampu Kost Pintar — Bit Masking</h1>
+    <p>Arsitektur dan Organisasi Komputer &nbsp;·&nbsp; Modul 4 &nbsp;·&nbsp; STTI NIIT Jakarta</p>
+  </div>
+  <div class="header-badge">Modul 4 — ALU</div>
+</div>
+
+<div class="main">
+<div class="grid">
+
+  <!-- ═══ KIRI: KAMAR ═══ -->
+  <div class="card">
+    <div class="card-title"><span>🚪</span> Kamar Kost No. 3</div>
+
+    <div class="kamar-wrap" id="kamar-wrap">
+      <div class="cahaya" id="cahaya"></div>
+
+      <!-- Lampu -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;z-index:1;">
+        <div class="lampu-bulb mati" id="lampu-bulb">💡</div>
+        <div class="lampu-label" id="lampu-label" style="color:var(--muted)">LAMPU MATI</div>
+      </div>
+
+      <!-- Ruangan -->
+      <div class="ruangan" id="ruangan">
+        <!-- Orang -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <div class="orang-icon tidak-ada" id="orang-icon">🧑</div>
+          <div class="orang-label" id="orang-label">Tidak ada orang</div>
+        </div>
+
+        <!-- Tombol sensor -->
+        <button class="sensor-btn" onclick="toggleGerak()">
+          <span class="sensor-icon">📡</span>
+          <span class="sensor-text">Sensor Gerak</span>
+          <span class="sensor-chip diam" id="sensor-chip">Tidak ada gerakan</span>
+        </button>
+      </div>
+
+      <!-- Panel inti bit masking -->
+      <div class="bm-panel">
+        <div class="bm-title">💡 Inti Bit Masking — Bagaimana CPU Memutuskan</div>
+        <div class="bm-formula">
+          <div class="bm-val">
+            <div class="bm-val-label">Status Register</div>
+            <div class="bm-val-box" id="bm-reg" style="color:var(--muted)">00000000</div>
+          </div>
+          <div class="bm-op">AND</div>
+          <div class="bm-val">
+            <div class="bm-val-label">Mask</div>
+            <div class="bm-val-box" style="color:var(--blue);border-color:var(--blue)">00000001</div>
+          </div>
+          <div class="bm-op eq">=</div>
+          <div class="bm-val">
+            <div class="bm-val-label">Hasil</div>
+            <div class="bm-val-box" id="bm-hasil" style="color:var(--muted)">00000000</div>
+          </div>
+        </div>
+        <div class="bm-result-box mati" id="bm-result">
+          Hasil = 00000000 &nbsp;→&nbsp; Syarat tidak terpenuhi &nbsp;→&nbsp; Lampu MATI
+        </div>
+        <div class="bm-note">
+          Lampu nyala <strong style="color:var(--green)">hanya jika hasil AND = 00000001</strong>
+          &nbsp;(bit 0 = ada gerakan)
+        </div>
+      </div>
+
+    </div><!-- end kamar-wrap -->
+
+    <div style="margin-top:10px;font-size:11px;color:var(--muted);text-align:center;">
+      Klik <strong style="color:var(--amber)">Sensor Gerak</strong> untuk simulasikan ada / tidak ada orang
+    </div>
+  </div>
+
+  <!-- ═══ KANAN: PROSES CPU ═══ -->
+  <div class="card">
+    <div class="card-title"><span>⚙️</span> Di Balik Layar — Proses CPU</div>
+    <div class="proses-section">
+
+      <!-- Status Register -->
+      <div class="reg-block">
+        <div class="reg-label">Status Register (8-bit)</div>
+        <div class="bits-row" id="reg-status"></div>
+        <div class="bits-legend">
+          <div class="leg"><div class="leg-dot" style="background:var(--amber)"></div>bit 0 = Sensor Gerak</div>
+          <div class="leg"><div class="leg-dot" style="background:var(--muted)"></div>bit 1–7 = sensor lain (tidak dipakai)</div>
+        </div>
+      </div>
+
+      <!-- Mask -->
+      <div class="reg-block">
+        <div class="reg-label">Mask &nbsp;<span style="font-family:var(--mono);color:var(--blue);font-size:11px;text-transform:none;letter-spacing:0">0b00000001</span></div>
+        <div class="bits-row" id="reg-mask"></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;">
+          Hanya <strong style="color:var(--blue)">bit 0</strong> yang aktif di mask — bit lain diabaikan
+        </div>
+      </div>
+
+      <!-- AND -->
+      <div class="reg-block">
+        <div class="reg-label">Operasi AND — Bit Masking</div>
+        <div class="and-step">
+          <div class="and-op-box">
+            <div class="and-op-label">Status Register</div>
+            <div class="and-op-val" id="and-a">00000000</div>
+          </div>
+          <div class="and-sym">AND</div>
+          <div class="and-op-box">
+            <div class="and-op-label">Mask</div>
+            <div class="and-op-val" style="color:var(--blue)">00000001</div>
+          </div>
+          <div class="and-sym eq">=</div>
+          <div class="and-result">
+            <div class="and-op-label">Hasil</div>
+            <div class="and-op-val" id="and-r">00000000</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Keputusan -->
+      <div class="keputusan mati" id="keputusan">
+        <div class="kep-icon" id="kep-icon">🌑</div>
+        <div>
+          <div class="kep-title" id="kep-title">Lampu MATI</div>
+          <div class="kep-desc" id="kep-desc">Hasil AND = 00000000 → bit 0 = 0 → tidak ada gerakan → lampu mati</div>
+        </div>
+      </div>
+
+      <!-- Log -->
+      <div>
+        <div class="card-title" style="margin-bottom:6px;"><span>📋</span> Log Interupsi</div>
+        <div class="log-area" id="log-area">
+          <div class="log-line" style="color:var(--muted);font-style:italic">Sistem siap. Klik sensor untuk memulai...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- end grid -->
+
+<!-- TABEL KONDISI -->
+<div class="card">
+  <div class="card-title"><span>📊</span> Semua Kemungkinan Kondisi</div>
+  <div style="overflow-x:auto">
+  <table class="cond-table">
+    <thead>
+      <tr>
+        <th>Sensor Gerak</th>
+        <th>Status Register</th>
+        <th>AND Mask (00000001)</th>
+        <th>Hasil</th>
+        <th>Keputusan</th>
+        <th>Alasan</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr id="row-0">
+        <td><span class="chip chip-gray">📡 Tidak ada gerakan</span></td>
+        <td><span class="mono">00000000</span></td>
+        <td><span class="mono">00000000 AND 00000001</span></td>
+        <td><span class="mono">00000000</span></td>
+        <td><span class="chip chip-red">💡 MATI</span></td>
+        <td style="font-size:11px;color:var(--muted)">Bit 0 = 0 → tidak ada orang → hemat listrik</td>
+      </tr>
+      <tr id="row-1">
+        <td><span class="chip chip-amber">📡 Ada gerakan!</span></td>
+        <td><span class="mono">00000001</span></td>
+        <td><span class="mono">00000001 AND 00000001</span></td>
+        <td><span class="mono" style="color:var(--green);font-weight:700">00000001</span></td>
+        <td><span class="chip chip-green">💡 NYALA ✓</span></td>
+        <td style="font-size:11px;color:var(--muted)">Bit 0 = 1 → ada orang di dalam → nyalakan lampu!</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <!-- Kode C -->
+  <div style="margin-top:12px;font-size:11px;font-family:var(--mono);background:#0f1923;padding:12px 14px;border-radius:8px;line-height:2;">
+    <span style="color:var(--muted)">// Logika lengkap dalam satu baris:</span><br>
+    <span style="color:var(--green)">if</span> (status_register <span style="color:var(--blue)">&amp;</span> <span style="color:var(--blue)">0b00000001</span>) {
+    &nbsp;&nbsp;<span style="color:var(--amber)">nyalakan_lampu</span>(); &nbsp;<span style="color:var(--muted)">// hasil AND != 0 → ada gerakan</span><br>
+    } <span style="color:var(--green)">else</span> {
+    &nbsp;&nbsp;<span style="color:var(--amber)">matikan_lampu</span>();  &nbsp;<span style="color:var(--muted)">// hasil AND == 0 → tidak ada gerakan</span><br>
+    }
+  </div>
+</div>
+
+</div><!-- end main -->
+
+<script>
+// ═══ STATE ═══
+let adaGerak = false;
+
+// ═══ TOGGLE ═══
+function toggleGerak() {
+  adaGerak = !adaGerak;
+  addLog('int', adaGerak ? 'Sensor gerak aktif — terdeteksi gerakan di kamar' : 'Sensor gerak berhenti — tidak ada gerakan');
+  update();
+}
+
+// ═══ UPDATE ═══
+function update() {
+  const bit0 = adaGerak ? 1 : 0;
+  const statusReg = bit0;           // hanya bit 0
+  const mask      = 0b00000001;
+  const hasil     = statusReg & mask;
+  const nyala     = hasil !== 0;
+
+  const statusBin = toBin8(statusReg);
+  const hasilBin  = toBin8(hasil);
+
+  // Kamar visual
+  updateKamar(nyala);
+
+  // Register
+  renderRegStatus(bit0);
+
+  // AND display
+  document.getElementById('and-a').textContent = statusBin;
+  document.getElementById('and-r').textContent = hasilBin;
+  document.getElementById('and-r').style.color = nyala ? 'var(--green)' : 'var(--muted)';
+
+  // Keputusan
+  const kep = document.getElementById('keputusan');
+  kep.className = 'keputusan ' + (nyala ? 'nyala' : 'mati');
+  document.getElementById('kep-icon').textContent  = nyala ? '💡' : '🌑';
+  document.getElementById('kep-title').textContent = nyala ? 'Lampu NYALA' : 'Lampu MATI';
+  document.getElementById('kep-desc').textContent  = nyala
+    ? 'Hasil AND = 00000001 → bit 0 = 1 → ada gerakan → nyalakan lampu!'
+    : 'Hasil AND = 00000000 → bit 0 = 0 → tidak ada gerakan → matikan lampu';
+
+  // Panel inti bit masking
+  const bmReg   = document.getElementById('bm-reg');
+  const bmHasil = document.getElementById('bm-hasil');
+  const bmRes   = document.getElementById('bm-result');
+
+  bmReg.textContent = statusBin;
+  bmReg.style.color = bit0 ? 'var(--amber)' : 'var(--muted)';
+
+  bmHasil.textContent = hasilBin;
+  bmHasil.style.color = nyala ? 'var(--green)' : 'var(--muted)';
+  bmHasil.style.borderColor = nyala ? 'var(--green)' : 'var(--border)';
+  bmHasil.style.boxShadow   = nyala ? '0 0 8px rgba(16,185,129,0.3)' : 'none';
+
+  bmRes.className = 'bm-result-box ' + (nyala ? 'nyala' : 'mati');
+  bmRes.innerHTML = nyala
+    ? 'Hasil = 00000001 &nbsp;→&nbsp; Syarat <strong>TERPENUHI</strong> &nbsp;→&nbsp; Lampu NYALA ✓'
+    : 'Hasil = 00000000 &nbsp;→&nbsp; Syarat tidak terpenuhi &nbsp;→&nbsp; Lampu MATI';
+
+  // Highlight tabel
+  document.getElementById('row-0').className = bit0 === 0 ? 'active' : '';
+  document.getElementById('row-1').className = bit0 === 1 ? 'active' : '';
+
+  // Log aksi
+  addLog('aksi', nyala ? 'Lampu DINYALAKAN' : 'Lampu DIMATIKAN', nyala);
+}
+
+// ═══ KAMAR ═══
+function updateKamar(nyala) {
+  document.getElementById('lampu-bulb').className = 'lampu-bulb ' + (nyala ? 'nyala' : 'mati');
+  document.getElementById('lampu-bulb').textContent = nyala ? '💡' : '🔦';
+
+  const label = document.getElementById('lampu-label');
+  label.textContent = nyala ? 'LAMPU NYALA' : 'LAMPU MATI';
+  label.style.color = nyala ? 'var(--amber)' : 'var(--muted)';
+
+  document.getElementById('cahaya').className = 'cahaya ' + (nyala ? 'nyala' : '');
+  document.getElementById('ruangan').className = 'ruangan ' + (nyala ? 'terang' : '');
+
+  document.getElementById('orang-icon').className = 'orang-icon ' + (adaGerak ? 'ada' : 'tidak-ada');
+  document.getElementById('orang-label').textContent = adaGerak ? 'Ada orang di dalam' : 'Tidak ada orang';
+
+  const chip = document.getElementById('sensor-chip');
+  chip.textContent = adaGerak ? 'Ada gerakan!' : 'Tidak ada gerakan';
+  chip.className = 'sensor-chip ' + (adaGerak ? 'gerak' : 'diam');
+}
+
+// ═══ REGISTER DISPLAY ═══
+function renderRegStatus(bit0) {
+  const c = document.getElementById('reg-status');
+  c.innerHTML = '';
+  for (let i = 7; i >= 0; i--) {
+    const val = (i === 0) ? bit0 : 0;
+    const cls = (i === 0 && bit0) ? 'bgerak' : 'b0';
+    const box = document.createElement('div');
+    box.className = 'bit-box ' + cls;
+    box.innerHTML = `${val}<span class="bp">${i}</span>`;
+    c.appendChild(box);
+  }
+}
+
+function renderRegMask() {
+  const c = document.getElementById('reg-mask');
+  c.innerHTML = '';
+  for (let i = 7; i >= 0; i--) {
+    const val = i === 0 ? 1 : 0;
+    const box = document.createElement('div');
+    box.className = 'bit-box ' + (val ? 'bmask' : 'b0');
+    box.innerHTML = `${val}<span class="bp">${i}</span>`;
+    c.appendChild(box);
+  }
+}
+
+// ═══ LOG ═══
+function addLog(type, msg, nyala) {
+  const area = document.getElementById('log-area');
+  const time = new Date().toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const line = document.createElement('div');
+  line.className = 'log-line new';
+  if (type === 'int') {
+    line.innerHTML = `<span class="lt">[${time}]</span> <span class="li">⚡ INTERUPSI:</span> ${msg}`;
+  } else {
+    const cls = nyala ? 'la' : 'lao';
+    line.innerHTML = `<span class="lt">[${time}]</span> <span class="lc">→ CPU cek bit masking</span> → <span class="${cls}">${msg}</span>`;
+  }
+  area.appendChild(line);
+  area.scrollTop = area.scrollHeight;
+  const lines = area.querySelectorAll('.log-line');
+  if (lines.length > 16) lines[0].remove();
+}
+
+// ═══ HELPER ═══
+function toBin8(n) { return (n >>> 0).toString(2).padStart(8, '0'); }
+
+// ═══ INIT ═══
+renderRegMask();
+renderRegStatus(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Firewall Rule Simulator — SKKJ STTI NIIT</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap');
+
+  :root {
+    --navy:       #1A2A4A;
+    --navy-mid:   #1E3A5F;
+    --teal:       #0D7A8A;
+    --teal-light: #12A0B5;
+    --gold:       #F0A500;
+    --off-white:  #F0F4F8;
+    --light-gray: #D0DBE8;
+    --muted:      #6B7FA3;
+    --white:      #FFFFFF;
+    --allow-bg:   #E8F8F0;
+    --allow-clr:  #0F6E56;
+    --allow-bdr:  #9FE1CB;
+    --deny-bg:    #FCEBEB;
+    --deny-clr:   #A32D2D;
+    --deny-bdr:   #F7C1C1;
+    --check-bg:   #FFF8E6;
+    --check-bdr:  #F0A500;
+    --font-body:  'Plus Jakarta Sans', sans-serif;
+    --font-mono:  'JetBrains Mono', monospace;
+    --radius:     10px;
+    --radius-sm:  6px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--off-white);
+    color: var(--navy);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--navy);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 16px rgba(26,42,74,.25);
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .header-icon {
+    width: 38px; height: 38px;
+    background: var(--teal);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .header-title { color: var(--white); font-size: 16px; font-weight: 600; line-height: 1.2; }
+  .header-sub   { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .header-badge {
+    background: var(--navy-mid);
+    color: var(--light-gray);
+    font-size: 11px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,.08);
+  }
+
+  /* ── MAIN LAYOUT ── */
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 24px 60px;
+  }
+
+  /* ── SECTION TITLE ── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  /* ── GRID 3 KOLOM ── */
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    align-items: start;
+    margin-bottom: 20px;
+  }
+  .col-sticky {
+    position: sticky;
+    top: 72px;          /* tinggi header */
+  }
+  @media (max-width: 900px) { .grid-3 { grid-template-columns: 1fr; } }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--white);
+    border-radius: var(--radius);
+    border: 1px solid var(--light-gray);
+    padding: 20px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--muted);
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--off-white);
+  }
+
+  /* ── SCENARIO BUTTONS ── */
+  .scenario-btn {
+    width: 100%;
+    text-align: left;
+    padding: 12px 14px;
+    border: 1.5px solid var(--light-gray);
+    border-radius: var(--radius-sm);
+    background: var(--off-white);
+    cursor: pointer;
+    margin-bottom: 8px;
+    transition: all .18s;
+    font-family: var(--font-body);
+  }
+  .scenario-btn:hover { border-color: var(--teal-light); background: #EAF6F8; }
+  .scenario-btn.active { border-color: var(--teal); background: #E1F5EE; }
+  .scenario-btn .s-header { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .scenario-btn .s-tag {
+    font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 4px;
+    font-family: var(--font-mono);
+  }
+  .tag-q { background: #E1F5EE; color: var(--teal); }
+  .tag-warn { background: var(--deny-bg); color: var(--deny-clr); }
+  .scenario-btn .s-title { font-size: 13px; font-weight: 600; color: var(--navy); }
+  .scenario-btn .s-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+  /* ── SCENARIO BOX ── */
+  .scenario-box {
+    background: var(--off-white);
+    border-left: 3px solid var(--teal);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--navy-mid);
+    line-height: 1.6;
+    margin-bottom: 16px;
+    min-height: 52px;
+  }
+  .scenario-box b { color: var(--navy); }
+
+  /* ── FORM FIELDS ── */
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .05em; }
+  .field input, .field select {
+    width: 100%; padding: 9px 12px;
+    font-size: 14px; font-family: var(--font-mono);
+    border: 1.5px solid var(--light-gray);
+    border-radius: var(--radius-sm);
+    background: var(--off-white);
+    color: var(--navy);
+    transition: border-color .15s;
+    outline: none;
+  }
+  .field input:focus, .field select:focus { border-color: var(--teal-light); }
+
+  /* ── SPEED ── */
+  .speed-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .speed-row label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .speed-row input[type=range] { flex: 1; accent-color: var(--teal); }
+  .speed-val { font-size: 12px; font-family: var(--font-mono); color: var(--navy); min-width: 20px; }
+
+  /* ── BUTTONS ── */
+  .btn-check {
+    width: 100%; padding: 11px;
+    font-size: 14px; font-weight: 600;
+    font-family: var(--font-body);
+    background: var(--navy);
+    color: var(--white);
+    border: none; border-radius: var(--radius-sm);
+    cursor: pointer; margin-top: 14px;
+    letter-spacing: .03em;
+    transition: background .15s, transform .1s;
+  }
+  .btn-check:hover { background: var(--navy-mid); }
+  .btn-check:active { transform: scale(.98); }
+  .btn-check:disabled { background: var(--muted); cursor: not-allowed; }
+
+  /* ── RULE TABLE ── */
+  .rule-table-wrap { overflow-x: auto; }
+  table {
+    width: 100%; border-collapse: collapse;
+    font-size: 13px; font-family: var(--font-mono);
+  }
+  th {
+    text-align: left; padding: 8px 10px;
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .07em;
+    color: var(--muted);
+    border-bottom: 1.5px solid var(--light-gray);
+  }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--off-white); }
+  tr.rule-row { transition: background .15s; }
+  tr.checking { background: var(--check-bg) !important; }
+  tr.matched  { background: var(--allow-bg) !important; }
+  tr.nomatch  { background: var(--deny-bg) !important; }
+
+  .badge {
+    display: inline-block; padding: 3px 9px;
+    border-radius: 4px; font-size: 12px; font-weight: 700;
+    font-family: var(--font-mono);
+  }
+  .badge-allow { background: var(--allow-bg); color: var(--allow-clr); }
+  .badge-deny  { background: var(--deny-bg);  color: var(--deny-clr);  }
+
+  .btn-del {
+    background: none; border: none;
+    color: var(--muted); cursor: pointer;
+    font-size: 16px; padding: 0 4px; line-height: 1;
+    transition: color .15s;
+  }
+  .btn-del:hover { color: var(--deny-clr); }
+
+  /* ── ADD RULE ── */
+  .add-rule-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .add-rule-row select, .add-rule-row input {
+    flex: 1; min-width: 55px;
+    padding: 6px 8px; font-size: 12px;
+    font-family: var(--font-mono);
+    border: 1.5px solid var(--light-gray);
+    border-radius: var(--radius-sm);
+    background: var(--off-white);
+    color: var(--navy); outline: none;
+  }
+  .btn-add {
+    padding: 6px 12px; font-size: 12px;
+    border: 1.5px solid var(--teal);
+    border-radius: var(--radius-sm);
+    background: var(--white); color: var(--teal);
+    cursor: pointer; font-weight: 600; white-space: nowrap;
+    transition: all .15s;
+  }
+  .btn-add:hover { background: var(--teal); color: var(--white); }
+  .btn-reset-rules {
+    float: right; font-size: 11px;
+    padding: 3px 9px; margin-top: -2px;
+    border: 1px solid var(--light-gray);
+    border-radius: 4px; background: none;
+    color: var(--muted); cursor: pointer;
+    transition: all .15s;
+  }
+  .btn-reset-rules:hover { background: var(--off-white); color: var(--navy); }
+
+  /* ── PROCESS PANEL ── */
+  .process-panel {
+    background: var(--white);
+    border-radius: var(--radius);
+    border: 1px solid var(--light-gray);
+    padding: 20px;
+    min-height: 90px;
+  }
+  .step-list { display: flex; flex-direction: column; gap: 8px; }
+  .step-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 9px 13px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--light-gray);
+    font-size: 13px; line-height: 1.5;
+    animation: fadeUp .25s ease;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .step-item.info    { border-color: var(--teal-light); background: #EAF6F8; }
+  .step-item.match   { border-color: var(--allow-bdr); background: var(--allow-bg); }
+  .step-item.nomatch { border-color: var(--deny-bdr); background: var(--deny-bg); }
+  .step-item.neutral { border-color: var(--light-gray); }
+  .step-icon { font-size: 15px; min-width: 18px; margin-top: 1px; }
+  .step-text { flex: 1; color: var(--navy); font-family: var(--font-mono); }
+  .step-text b { font-weight: 700; }
+  .idle-msg { font-size: 13px; color: var(--muted); font-style: italic; }
+
+  /* ── RESULT BOX ── */
+  .result-box {
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    display: flex; align-items: center; gap: 16px;
+    animation: fadeUp .3s ease;
+  }
+  .result-allow { background: var(--allow-bg); border: 2px solid var(--allow-bdr); }
+  .result-deny  { background: var(--deny-bg);  border: 2px solid var(--deny-bdr);  }
+  .result-icon {
+    width: 48px; height: 48px;
+    border-radius: 50%; display: flex;
+    align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+    font-family: var(--font-mono); font-weight: 700;
+  }
+  .icon-allow { background: var(--allow-bdr); color: var(--allow-clr); }
+  .icon-deny  { background: var(--deny-bdr);  color: var(--deny-clr);  }
+  .result-label { font-size: 22px; font-weight: 700; font-family: var(--font-mono); }
+  .result-allow .result-label { color: var(--allow-clr); }
+  .result-deny  .result-label { color: var(--deny-clr); }
+  .result-detail { font-size: 13px; color: var(--muted); margin-top: 3px; font-family: var(--font-mono); }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center; color: var(--muted);
+    font-size: 12px; margin-top: 50px;
+    padding-top: 18px;
+    border-top: 1px solid var(--light-gray);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="header-icon">🔥</div>
+    <div>
+      <div class="header-title">Firewall Rule Simulator</div>
+      <div class="header-sub">Sistem Keamanan Jaringan Komputer &nbsp;·&nbsp; STTI NIIT Jakarta</div>
+    </div>
+  </div>
+  <img src="data:image/jpeg;base64,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" alt="I·TeCH" style="height:32px;object-fit:contain;background:white;border-radius:5px;padding:3px 8px;">
+</header>
+
+<main>
+
+  <div class="grid-3">
+
+    <!-- KOLOM KIRI: INPUT -->
+    <div class="col-sticky">
+      <div class="card">
+        <div class="card-title">Paket masuk</div>
+
+        <div class="section-label">Pilih skenario</div>
+
+        <button class="scenario-btn" id="s-btn-1" onclick="loadPreset(1)">
+          <div class="s-header">
+            <span class="s-tag tag-q">S1</span>
+            <span class="s-title">Mahasiswa luar kampus</span>
+          </div>
+          <div class="s-desc">Akses portal e-learning (port 443) dari IP publik di luar jaringan kampus. Apakah diizinkan?</div>
+        </button>
+
+        <button class="scenario-btn" id="s-btn-2" onclick="loadPreset(2)">
+          <div class="s-header">
+            <span class="s-tag tag-q">S2</span>
+            <span class="s-title">Admin IT kampus</span>
+          </div>
+          <div class="s-desc">Admin dari dalam jaringan kampus mencoba SSH ke server akademik (port 22). Perhatikan urutan rule!</div>
+        </button>
+
+        <button class="scenario-btn" id="s-btn-3" onclick="loadPreset(3)">
+          <div class="s-header">
+            <span class="s-tag tag-warn">S3</span>
+            <span class="s-title">IP berbahaya</span>
+          </div>
+          <div class="s-desc">IP dari subnet 185.220.x.x (dikenal berbahaya) mencoba akses port 443. Apakah lolos meski Rule #2 mengizinkan ANY?</div>
+        </button>
+
+        <div class="scenario-box" id="scenario-desc">Pilih skenario di atas atau isi paket secara manual di bawah.</div>
+
+        <div class="field">
+          <label>Source IP</label>
+          <input id="src-ip" type="text" placeholder="contoh: 203.0.113.10">
+        </div>
+        <div class="field">
+          <label>Destination IP</label>
+          <input id="dst-ip" type="text" placeholder="contoh: 10.10.1.5">
+        </div>
+        <div class="field">
+          <label>Port tujuan</label>
+          <select id="port">
+            <option value="80">80 — HTTP</option>
+            <option value="443">443 — HTTPS</option>
+            <option value="22">22 — SSH</option>
+            <option value="21">21 — FTP</option>
+            <option value="25">25 — SMTP</option>
+            <option value="ANY">ANY</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Protocol</label>
+          <select id="proto">
+            <option value="TCP">TCP</option>
+            <option value="UDP">UDP</option>
+            <option value="ICMP">ICMP</option>
+            <option value="ANY">ANY</option>
+          </select>
+        </div>
+
+        <button class="btn-check" id="btn-check" onclick="runCheck()">▶&nbsp; Periksa Paket</button>
+
+        <div class="speed-row">
+          <label>Kecepatan animasi</label>
+          <input type="range" id="speed" min="1" max="5" value="3" step="1"
+            oninput="document.getElementById('speed-val').textContent=this.value">
+          <span class="speed-val" id="speed-val">3</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- KOLOM TENGAH: RULESET -->
+    <div class="col-sticky">
+      <div class="card">
+        <div class="card-title">
+          Ruleset firewall
+          <button class="btn-reset-rules" onclick="resetRules()">Reset</button>
+        </div>
+        <div class="rule-table-wrap">
+          <table id="rule-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Action</th>
+                <th>Source</th>
+                <th>Destination</th>
+                <th>Port</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="rule-body"></tbody>
+          </table>
+        </div>
+        <div class="add-rule-row">
+          <select id="new-action">
+            <option value="ALLOW">ALLOW</option>
+            <option value="DENY">DENY</option>
+          </select>
+          <input id="new-src" placeholder="Source">
+          <input id="new-dst" placeholder="Dest">
+          <input id="new-port" placeholder="Port">
+          <button class="btn-add" onclick="addRule()">+ Tambah Rule</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- KOLOM KANAN: ANIMASI PEMERIKSAAN -->
+    <div class="col-sticky">
+      <div class="process-panel">
+        <div class="card-title" style="margin-bottom:12px">Proses pemeriksaan</div>
+        <div id="process-log">
+          <div class="idle-msg">Pilih skenario atau isi paket, lalu tekan &quot;Periksa Paket&quot; untuk memulai simulasi...</div>
+        </div>
+      </div>
+      <div id="result-area" style="margin-top:16px"></div>
+    </div>
+
+  </div><!-- end grid-3 -->
+
+</main>
+
+<footer>
+  Arismunandar, M.T.I. &nbsp;·&nbsp; Sistem Keamanan Jaringan Komputer &nbsp;·&nbsp; STTI NIIT Jakarta
+</footer>
+
+<script>
+const defaultRules = [
+  { action:'DENY',  src:'185.220.0.0/16', dst:'ANY',       port:'ANY'     },
+  { action:'ALLOW', src:'ANY',            dst:'10.10.1.5',  port:'80,443'  },
+  { action:'ALLOW', src:'10.0.0.0/8',    dst:'10.10.1.5',  port:'22'      },
+  { action:'DENY',  src:'ANY',            dst:'10.10.1.5',  port:'22'      },
+  { action:'DENY',  src:'ANY',            dst:'ANY',        port:'ANY'     },
+];
+
+let rules = defaultRules.map(r => ({ ...r }));
+
+const presets = [
+  null,
+  {
+    src:'203.0.113.10', dst:'10.10.1.5', port:'443',
+    desc:`<b>Skenario 1 — Mahasiswa luar kampus:</b> IP publik <b>203.0.113.10</b> mencoba mengakses portal e-learning di server <b>10.10.1.5</b> melalui port <b>443 (HTTPS)</b>. Firewall memeriksa dari atas — apakah IP ini masuk daftar blokir? Apakah ada rule yang mengizinkan akses HTTPS dari siapa saja?`
+  },
+  {
+    src:'10.0.1.50', dst:'10.10.1.5', port:'22',
+    desc:`<b>Skenario 2 — Admin IT kampus:</b> Admin dengan IP <b>10.0.1.50</b> (berada dalam subnet <b>10.0.0.0/8</b>) mencoba SSH ke server akademik <b>10.10.1.5</b> via port <b>22</b>. Ada <b>dua rule yang menyebut port 22</b> — mana yang dieksekusi lebih dulu? Mengapa urutan rule sangat penting?`
+  },
+  {
+    src:'185.220.101.5', dst:'10.10.1.5', port:'443',
+    desc:`<b>Skenario 3 — IP berbahaya:</b> IP <b>185.220.101.5</b> dari subnet <b>185.220.0.0/16</b> (dikenal sumber serangan) mencoba akses port <b>443</b>. Meskipun Rule #2 mengizinkan port 443 dari <b>ANY</b>, apakah paket ini tetap lolos? Perhatikan posisi Rule #1!`
+  },
+];
+
+function setActiveBtn(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById('s-btn-'+i).classList.toggle('active', i === n);
+  });
+}
+
+function loadPreset(n) {
+  const p = presets[n];
+  document.getElementById('src-ip').value = p.src;
+  document.getElementById('dst-ip').value = p.dst;
+  document.getElementById('port').value   = p.port;
+  document.getElementById('scenario-desc').innerHTML = p.desc;
+  document.getElementById('process-log').innerHTML =
+    '<div class="idle-msg">Paket sudah diisi dari skenario — tekan "Periksa Paket" untuk mulai.</div>';
+  document.getElementById('result-area').innerHTML = '';
+  resetHighlights();
+  setActiveBtn(n);
+}
+
+function resetRules() {
+  rules = defaultRules.map(r => ({ ...r }));
+  renderRules();
+  resetHighlights();
+}
+
+function renderRules() {
+  const tbody = document.getElementById('rule-body');
+  tbody.innerHTML = '';
+  rules.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    tr.className = 'rule-row';
+    tr.id = 'rule-' + i;
+    tr.innerHTML = `
+      <td style="color:var(--muted);width:28px">${i+1}</td>
+      <td><span class="badge badge-${r.action.toLowerCase()}">${r.action}</span></td>
+      <td>${r.src}</td>
+      <td>${r.dst}</td>
+      <td>${r.port}</td>
+      <td><button class="btn-del" onclick="delRule(${i})">×</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function delRule(i) { rules.splice(i, 1); renderRules(); }
+
+function addRule() {
+  const a = document.getElementById('new-action').value;
+  const s = document.getElementById('new-src').value.trim()   || 'ANY';
+  const d = document.getElementById('new-dst').value.trim()   || 'ANY';
+  const p = document.getElementById('new-port').value.trim()  || 'ANY';
+  rules.push({ action:a, src:s, dst:d, port:p });
+  renderRules();
+  ['new-src','new-dst','new-port'].forEach(id => document.getElementById(id).value = '');
+}
+
+function ipToInt(ip) {
+  return ip.split('.').reduce((acc, v) => (acc << 8) + parseInt(v, 10), 0) >>> 0;
+}
+function ipInRange(ip, range) {
+  if (range === 'ANY') return true;
+  if (!range.includes('/')) return ip.trim() === range.trim();
+  try {
+    const [net, bits] = range.split('/');
+    const mask = ~((1 << (32 - parseInt(bits, 10))) - 1) >>> 0;
+    return (ipToInt(ip) & mask) === (ipToInt(net) & mask);
+  } catch(e) { return false; }
+}
+function dstMatch(ip, rule) {
+  if (rule === 'ANY') return true;
+  return rule.includes('/') ? ipInRange(ip, rule) : ip.trim() === rule.trim();
+}
+function portMatch(pkt, rulePort) {
+  if (rulePort === 'ANY' || pkt === 'ANY') return true;
+  return rulePort.split(',').map(s => s.trim()).includes(String(pkt));
+}
+function resetHighlights() {
+  rules.forEach((_, i) => {
+    const tr = document.getElementById('rule-' + i);
+    if (tr) tr.className = 'rule-row';
+  });
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+let running = false;
+
+async function runCheck() {
+  if (running) return;
+  running = true;
+
+  const src   = document.getElementById('src-ip').value.trim();
+  const dst   = document.getElementById('dst-ip').value.trim();
+  const port  = document.getElementById('port').value;
+  const speed = parseInt(document.getElementById('speed').value);
+  const delay = Math.round(1200 / speed);
+  const btn   = document.getElementById('btn-check');
+
+  if (!src || !dst) {
+    document.getElementById('process-log').innerHTML =
+      '<div class="idle-msg">Isi Source IP dan Destination IP terlebih dahulu.</div>';
+    running = false; return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Memeriksa...';
+  resetHighlights();
+  document.getElementById('result-area').innerHTML = '';
+  document.getElementById('process-log').innerHTML = '<div class="step-list" id="steps"></div>';
+  const stepList = document.getElementById('steps');
+
+  function addStep(icon, html, type) {
+    const d = document.createElement('div');
+    d.className = 'step-item ' + (type || 'neutral');
+    d.innerHTML = `<span class="step-icon">${icon}</span><span class="step-text">${html}</span>`;
+    stepList.appendChild(d);
+    d.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+
+  addStep('▶', `Paket tiba — src: <b>${src}</b> &nbsp;|&nbsp; dst: <b>${dst}</b> &nbsp;|&nbsp; port: <b>${port}</b>`, 'info');
+  addStep('↓', 'Memeriksa ruleset dari atas ke bawah...', 'neutral');
+  await sleep(delay);
+
+  let matched = false;
+
+  for (let i = 0; i < rules.length; i++) {
+    const r  = rules[i];
+    const tr = document.getElementById('rule-' + i);
+    if (tr) tr.className = 'rule-row checking';
+    addStep('◉', `Rule #${i+1}: <b>${r.action}</b> &nbsp;|&nbsp; src=${r.src} &nbsp;|&nbsp; dst=${r.dst} &nbsp;|&nbsp; port=${r.port}`, 'neutral');
+    await sleep(delay);
+
+    const sm = ipInRange(src, r.src);
+    const dm = dstMatch(dst, r.dst);
+    const pm = portMatch(port, r.port);
+
+    if (sm && dm && pm) {
+      if (tr) tr.className = 'rule-row matched';
+      addStep('✓', `Rule #${i+1} <b>cocok</b> → eksekusi <b>${r.action}</b>`, 'match');
+      await sleep(delay / 2);
+      showResult(r.action, i + 1, r);
+      matched = true;
+      break;
+    } else {
+      if (tr) tr.className = 'rule-row nomatch';
+      const reasons = [];
+      if (!sm) reasons.push(`src <b>${src}</b> bukan dari <b>${r.src}</b>`);
+      if (!dm) reasons.push(`destination tidak cocok`);
+      if (!pm) reasons.push(`port <b>${port}</b> tidak termasuk <b>${r.port}</b>`);
+      addStep('✗', `Rule #${i+1} tidak cocok: ${reasons.join(' &amp; ')} → lanjut ke bawah`, 'nomatch');
+      await sleep(delay);
+    }
+  }
+
+  if (!matched) {
+    addStep('⊘', 'Tidak ada rule yang cocok → default: <b>DENY ALL</b>', 'nomatch');
+    showResult('DENY', 'default', null);
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '▶&nbsp; Periksa Paket';
+  running = false;
+}
+
+function showResult(action, ruleNum, rule) {
+  const isAllow = action === 'ALLOW';
+  const ruleLabel = ruleNum === 'default'
+    ? 'Default DENY ALL — tidak ada rule yang cocok'
+    : `Rule #${ruleNum}: ${rule ? rule.action + ' | src=' + rule.src + ' | dst=' + rule.dst + ' | port=' + rule.port : ''}`;
+
+  document.getElementById('result-area').innerHTML = `
+    <div class="result-box result-${isAllow ? 'allow' : 'deny'}">
+      <div class="result-icon icon-${isAllow ? 'allow' : 'deny'}">${isAllow ? '✓' : '✕'}</div>
+      <div>
+        <div class="result-label">Paket ${isAllow ? 'DIIZINKAN (ALLOW)' : 'DITOLAK (DENY)'}</div>
+        <div class="result-detail">Berlaku: ${ruleLabel}</div>
+      </div>
+    </div>
+  `;
+  // result always visible in right column
+}
+
+renderRules();
+</script>
+</body>
+</html>

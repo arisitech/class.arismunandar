@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo Interaktif — ALU Minggu 4</title>
+<style>
+:root {
+  --navy:   #1A1A2E;
+  --purple: #4A4E6B;
+  --blue:   #5FCBEF;
+  --green:  #42D0A2;
+  --gold:   #FAC775;
+  --red:    #F28B82;
+  --white:  #FFFFFF;
+  --off:    #F4F6FA;
+  --muted:  #8892A4;
+  --border: #E0E4EF;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: var(--off); color: var(--navy); min-height: 100vh; display: flex; flex-direction: column; }
+
+/* HEADER */
+.hdr { background: var(--navy); padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
+.hdr-title { color: var(--white); font-size: 15px; font-weight: 700; }
+.hdr-sub { color: var(--blue); font-size: 12px; margin-top: 2px; }
+.badge { background: var(--purple); color: var(--blue); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
+
+/* TAB NAV */
+.tab-nav { background: var(--navy); display: flex; gap: 4px; padding: 0 24px; border-top: 1px solid #2a2a45; overflow-x: auto; }
+.tab-btn { background: none; border: none; color: var(--muted); font-size: 13px; font-weight: 600; padding: 12px 18px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; transition: all .2s; }
+.tab-btn:hover { color: var(--white); }
+.tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+/* CONTENT */
+.tab-content { display: none; flex: 1; padding: 20px 24px; }
+.tab-content.active { display: block; }
+
+/* CARD */
+.card { background: var(--white); border-radius: 12px; border: 1px solid var(--border); padding: 20px; margin-bottom: 16px; }
+.card-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.card-row { display: grid; gap: 16px; }
+.card-row.col2 { grid-template-columns: 1fr 1fr; }
+.card-row.col3 { grid-template-columns: 1fr 1fr 1fr; }
+
+/* BITS DISPLAY */
+.bits-wrap { display: flex; gap: 3px; justify-content: center; flex-wrap: wrap; }
+.bit { width: 34px; height: 34px; border-radius: 6px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-family: 'Courier New', monospace; font-size: 16px; font-weight: 700; background: var(--off); transition: all .3s; }
+.bit.b1 { background: var(--blue); border-color: #3ab0d8; color: var(--navy); }
+.bit.b0 { background: var(--off); border-color: var(--border); color: var(--muted); }
+.bit.carry { background: var(--gold); border-color: #e0a830; color: var(--navy); }
+.bit.overflow { background: var(--red); border-color: #d06060; color: var(--white); }
+.bit-pos { font-size: 9px; color: var(--muted); text-align: center; margin-top: 2px; }
+
+/* INPUT */
+.num-input { width: 100%; padding: 10px 14px; border: 2px solid var(--border); border-radius: 8px; font-size: 16px; font-family: 'Courier New', monospace; text-align: center; outline: none; transition: border .2s; }
+.num-input:focus { border-color: var(--blue); }
+.label { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+.val-display { font-size: 28px; font-weight: 700; color: var(--navy); text-align: center; font-family: 'Courier New', monospace; }
+.val-sub { font-size: 12px; color: var(--muted); text-align: center; margin-top: 4px; }
+
+/* BUTTON */
+.btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .2s; }
+.btn-primary { background: var(--blue); color: var(--navy); }
+.btn-primary:hover { background: #4ab8e0; }
+.btn-secondary { background: var(--off); color: var(--purple); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--border); }
+.btn-green { background: var(--green); color: var(--navy); }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* OP BUTTONS */
+.op-btn { padding: 8px 16px; border: 2px solid var(--border); border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; background: var(--off); color: var(--purple); transition: all .2s; }
+.op-btn.active { background: var(--blue); border-color: var(--blue); color: var(--navy); }
+
+/* FLAGS */
+.flags-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.flag { border-radius: 8px; padding: 8px 14px; text-align: center; min-width: 70px; border: 2px solid var(--border); transition: all .3s; }
+.flag .flag-name { font-size: 11px; font-weight: 700; color: var(--muted); }
+.flag .flag-val { font-size: 22px; font-weight: 700; font-family: 'Courier New', monospace; color: var(--navy); }
+.flag.active { border-color: var(--gold); background: #fff9e6; }
+.flag.active .flag-val { color: #c87800; }
+
+/* STEP LOG */
+.step-log { background: var(--navy); border-radius: 10px; padding: 14px 16px; font-family: 'Courier New', monospace; font-size: 12px; color: #aab4d4; min-height: 80px; max-height: 180px; overflow-y: auto; }
+.log-line { margin-bottom: 5px; line-height: 1.5; }
+.log-ok   { color: var(--green); }
+.log-warn { color: var(--gold); }
+.log-err  { color: var(--red); }
+.log-info { color: var(--blue); }
+
+/* TABLE */
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th { background: var(--navy); color: var(--white); padding: 9px 12px; text-align: left; font-size: 12px; }
+.tbl td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.tbl tr:nth-child(even) td { background: var(--off); }
+.tbl tr.hl td { background: #fff9e6; font-weight: 700; color: var(--navy); }
+
+/* ADDER VISUAL */
+.adder-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
+.adder-cell { background: var(--off); border: 2px solid var(--border); border-radius: 10px; padding: 12px 8px; text-align: center; transition: all .4s; }
+.adder-cell.active { background: #e8f5ff; border-color: var(--blue); }
+.adder-cell.carry-active { background: #fff9e6; border-color: var(--gold); }
+.adder-cell .ac-pos { font-size: 10px; color: var(--muted); font-weight: 700; margin-bottom: 4px; }
+.adder-cell .ac-a { font-size: 18px; font-weight: 700; color: var(--purple); }
+.adder-cell .ac-b { font-size: 18px; font-weight: 700; color: var(--blue); }
+.adder-cell .ac-cin { font-size: 10px; color: var(--gold); font-weight: 700; }
+.adder-cell .ac-sum { font-size: 22px; font-weight: 700; color: var(--green); margin-top: 4px; }
+.adder-cell .ac-cout { font-size: 10px; color: var(--red); font-weight: 700; }
+.section-hdr { font-size: 13px; font-weight: 700; color: var(--purple); margin: 14px 0 8px; }
+
+/* SHIFT VISUAL */
+.shift-track { display: flex; gap: 3px; justify-content: center; margin: 10px 0; }
+.shift-bit { width: 36px; height: 36px; border-radius: 6px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-family: 'Courier New', monospace; font-size: 16px; font-weight: 700; transition: all .4s; background: var(--off); }
+.shift-bit.moved { background: var(--green); border-color: #2cb88a; color: var(--navy); }
+.shift-bit.lost { background: var(--red); border-color: #d06060; color: var(--white); opacity: .5; }
+.shift-bit.filled { background: #e0e4ef; border-color: var(--border); color: var(--muted); }
+
+/* BOOTH TABLE */
+.booth-tbl { width: 100%; border-collapse: collapse; font-size: 12px; font-family: 'Courier New', monospace; }
+.booth-tbl th { background: var(--navy); color: var(--white); padding: 8px 10px; text-align: center; font-size: 11px; }
+.booth-tbl td { padding: 7px 10px; border-bottom: 1px solid var(--border); text-align: center; }
+.booth-tbl tr.current td { background: #e8f9ff; font-weight: 700; }
+.booth-tbl tr.done-row td { background: #f0fbf6; }
+
+/* MASKING VISUAL */
+.mask-row { display: flex; align-items: center; gap: 12px; margin: 8px 0; flex-wrap: wrap; }
+.mask-label { font-size: 12px; font-weight: 700; color: var(--muted); width: 50px; text-align: right; flex-shrink: 0; }
+.mask-result { font-size: 13px; font-weight: 700; color: var(--green); font-family: 'Courier New', monospace; }
+
+/* INFO BOX */
+.info-box { background: #f0fbf6; border-left: 4px solid var(--green); border-radius: 0 8px 8px 0; padding: 12px 16px; font-size: 13px; line-height: 1.6; margin: 10px 0; }
+.warn-box { background: #fff9e6; border-left: 4px solid var(--gold); border-radius: 0 8px 8px 0; padding: 12px 16px; font-size: 13px; line-height: 1.6; margin: 10px 0; }
+
+@media (max-width: 640px) {
+  .card-row.col2, .card-row.col3 { grid-template-columns: 1fr; }
+  .adder-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div style="flex:1">
+    <div class="hdr-title">Demo Interaktif — ALU (Arithmetic Logic Unit)</div>
+    <div class="hdr-sub">Arsitektur dan Organisasi Komputer &nbsp;·&nbsp; Minggu 4</div>
+  </div>
+  <div class="badge">Minggu 4</div>
+</div>
+
+<!-- TAB NAV -->
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="showTab('adder')">➕ Full Adder & Aritmetika</button>
+  <button class="tab-btn" onclick="showTab('logika')">⚙️ Logika Bitwise</button>
+  <button class="tab-btn" onclick="showTab('shift')">↔️ Operasi Shift</button>
+  <button class="tab-btn" onclick="showTab('kali')">✖️ Perkalian Biner</button>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- TAB 1 — FULL ADDER & ARITMETIKA              -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="tab-adder" class="tab-content active">
+  <div class="card-row col2">
+
+    <!-- INPUT -->
+    <div class="card" style="display:flex;flex-direction:column;gap:0;">
+      <div class="card-title">Input Operand (signed 8-bit: −128 s/d 127)</div>
+      <div style="margin-bottom:12px">
+        <div class="label">Operand A</div>
+        <input class="num-input" id="add-a" type="number" min="-128" max="127" value="" placeholder="-128 s/d 127">
+      </div>
+      <div style="margin-bottom:12px">
+        <div class="label">Operand B</div>
+        <input class="num-input" id="add-b" type="number" min="-128" max="127" value="" placeholder="-128 s/d 127">
+      </div>
+      <div class="label" style="margin-bottom:6px">Pilih Operasi</div>
+      <div class="btn-row" style="margin-bottom:12px">
+        <button class="op-btn active" id="btn-add" onclick="setAdderOp('add')">➕ ADD</button>
+        <button class="op-btn" id="btn-sub" onclick="setAdderOp('sub')">➖ SUB (Two's Comp)</button>
+      </div>
+      <div class="btn-row" style="margin-bottom:14px">
+        <button class="btn btn-green" style="flex:1;font-size:14px;padding:12px;" onclick="adderCalc()">▶ Mulai Simulasi</button>
+        <button class="btn btn-secondary" style="padding:12px 18px;" onclick="resetAdder()">↺ Reset</button>
+      </div>
+      <!-- LOG langsung di sini -->
+      <div class="label" style="margin-bottom:6px">Log Langkah-langkah</div>
+      <div class="step-log" id="adder-log" style="flex:1;min-height:180px;max-height:320px;font-size:12px;line-height:1.9;">
+        <div class="log-line" style="color:#666;">Isi angka → pilih operasi → klik ▶ Mulai Simulasi</div>
+      </div>
+    </div>
+
+    <!-- FLAGS -->
+    <div class="card">
+      <div class="card-title">Flags Register ALU</div>
+      <div class="flags-row" style="margin-bottom:12px">
+        <div class="flag" id="flag-z"><div class="flag-name">Zero (Z)</div><div class="flag-val" id="fv-z">0</div></div>
+        <div class="flag" id="flag-c"><div class="flag-name">Carry (C)</div><div class="flag-val" id="fv-c">0</div></div>
+        <div class="flag" id="flag-o"><div class="flag-name">Overflow (O)</div><div class="flag-val" id="fv-o">0</div></div>
+        <div class="flag" id="flag-s"><div class="flag-name">Sign (S)</div><div class="flag-val" id="fv-s">0</div></div>
+      </div>
+      <div id="flag-explain-box" style="border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:12px;line-height:1.7;display:none;"></div>
+      <div class="section-hdr">Hasil Operasi</div>
+      <div class="val-display" id="add-result">—</div>
+      <div class="val-sub" id="add-result-bin">—</div>
+      <div class="val-sub" id="add-result-desc" style="margin-top:6px;font-size:12px;color:var(--purple);">—</div>
+    </div>
+  </div>
+
+
+
+  <!-- TRUTH TABLE FULL ADDER -->
+  <div class="card">
+    <div class="card-title">Tabel Kebenaran Full Adder</div>
+    <table class="tbl">
+      <thead><tr><th>A</th><th>B</th><th>Cin</th><th>Sum</th><th>Cout</th><th>Keterangan</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>Nol + Nol = 0, tidak ada carry</td></tr>
+        <tr><td>0</td><td>1</td><td>0</td><td>1</td><td>0</td><td>0 + 1 = 1</td></tr>
+        <tr><td>1</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1 + 0 = 1</td></tr>
+        <tr><td>1</td><td>1</td><td>0</td><td>0</td><td>1</td><td>1 + 1 = 10₂, tulis 0 carry 1</td></tr>
+        <tr><td>0</td><td>0</td><td>1</td><td>1</td><td>0</td><td>0 + 0 + carry = 1</td></tr>
+        <tr><td>0</td><td>1</td><td>1</td><td>0</td><td>1</td><td>0 + 1 + 1 = 10₂</td></tr>
+        <tr><td>1</td><td>0</td><td>1</td><td>0</td><td>1</td><td>1 + 0 + 1 = 10₂</td></tr>
+        <tr><td>1</td><td>1</td><td>1</td><td>1</td><td>1</td><td>1 + 1 + 1 = 11₂, tulis 1 carry 1</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- TAB 2 — LOGIKA BITWISE                        -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="tab-logika" class="tab-content" style="height:calc(100vh - 110px);overflow:hidden;">
+  <div style="display:grid;grid-template-columns:300px 1fr;gap:16px;height:100%;">
+
+    <!-- KIRI: Input + Tombol -->
+    <div class="card" style="display:flex;flex-direction:column;gap:10px;overflow:hidden;">
+      <div class="card-title">Input Operand (signed 8-bit: −128 s/d 127)</div>
+      <div>
+        <div class="label">Operand A</div>
+        <input class="num-input" id="log-a" type="number" min="0" max="255" value="" placeholder="0 – 255">
+      </div>
+      <div id="log-b-wrap">
+        <div class="label">Operand B</div>
+        <input class="num-input" id="log-b" type="number" min="0" max="255" value="" placeholder="0 – 255">
+      </div>
+      <div>
+        <div class="label" style="margin-bottom:6px">Pilih Operasi</div>
+        <div class="btn-row" style="flex-wrap:wrap;gap:6px;">
+          <button class="op-btn active" id="lop-AND" onclick="setLogOp('AND')">AND</button>
+          <button class="op-btn" id="lop-OR"  onclick="setLogOp('OR')">OR</button>
+          <button class="op-btn" id="lop-XOR" onclick="setLogOp('XOR')">XOR</button>
+          <button class="op-btn" id="lop-NOT" onclick="setLogOp('NOT')">NOT A</button>
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top:auto;">
+        <button class="btn btn-green" style="flex:1;font-size:14px;padding:12px;" onclick="logCalc()">▶ Mulai</button>
+        <button class="btn btn-secondary" style="padding:12px 18px;" onclick="resetLogika()">↺ Reset</button>
+      </div>
+    </div>
+
+    <!-- KANAN: Hasil + Visualisasi Bit -->
+    <div style="display:flex;flex-direction:column;gap:16px;overflow:hidden;min-height:0;">
+
+      <!-- Hasil + Penjelasan -->
+      <div class="card" style="flex-shrink:0;">
+        <div class="card-title">Hasil Operasi</div>
+        <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+          <div>
+            <div class="val-display" id="log-result" style="font-size:40px;">—</div>
+            <div class="val-sub" id="log-result-bin" style="margin-top:4px;">—</div>
+          </div>
+          <div class="info-box" id="log-desc" style="flex:1;font-size:12px;margin:0;min-width:200px;"></div>
+        </div>
+      </div>
+
+      <!-- Visualisasi Bit -->
+      <div class="card" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+        <div class="card-title">Visualisasi Bit per Bit</div>
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:space-evenly;">
+          <div>
+            <div class="label">A</div>
+            <div class="bits-wrap" id="log-bits-a" style="justify-content:flex-start;gap:4px;"></div>
+          </div>
+          <div id="log-b-vis">
+            <div class="label">B</div>
+            <div class="bits-wrap" id="log-bits-b" style="justify-content:flex-start;gap:4px;"></div>
+          </div>
+          <div style="border-top:2px solid var(--border);padding-top:10px;">
+            <div class="label" id="log-res-label">Hasil</div>
+            <div class="bits-wrap" id="log-bits-res" style="justify-content:flex-start;gap:4px;"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- TAB 3 — OPERASI SHIFT                        -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="tab-shift" class="tab-content">
+  <div class="card-row col2">
+    <div class="card">
+      <div class="card-title">Input (signed 8-bit: −128 s/d 127)</div>
+      <div style="margin-bottom:12px">
+        <div class="label">Nilai (−128 s/d 127)</div>
+        <input class="num-input" id="sh-val" type="number" min="-128" max="127" value="" placeholder="-128 s/d 127">
+      </div>
+      <div style="margin-bottom:12px">
+        <div class="label">Jumlah Posisi (1 – 7)</div>
+        <input class="num-input" id="sh-pos" type="number" min="1" max="7" value="" placeholder="1 – 7">
+      </div>
+      <div class="btn-row" style="margin-bottom:10px">
+        <button class="op-btn active" id="sop-LSL" onclick="setShiftOp('LSL')">LSL ← Kiri</button>
+        <button class="op-btn" id="sop-LSR" onclick="setShiftOp('LSR')">LSR → Kanan</button>
+        <button class="op-btn" id="sop-ASR" onclick="setShiftOp('ASR')">ASR → Aritmetika</button>
+        <button class="op-btn" id="sop-ROL" onclick="setShiftOp('ROL')">ROL ↺ Putar Kiri</button>
+        <button class="op-btn" id="sop-ROR" onclick="setShiftOp('ROR')">ROR ↻ Putar Kanan</button>
+      </div>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="btn btn-green" style="flex:1;font-size:14px;padding:12px;" onclick="shiftCalc()">▶ Mulai Simulasi</button>
+        <button class="btn btn-secondary" style="padding:12px 18px;" onclick="resetShift()" title="Reset">↺ Reset</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Hasil</div>
+      <div class="val-display" id="sh-result">—</div>
+      <div class="val-sub" id="sh-result-bin">—</div>
+      <div id="sh-math" class="info-box" style="margin-top:12px;font-size:12px;"></div>
+    </div>
+  </div>
+
+  <!-- SHIFT VISUALIZATION -->
+  <div class="card">
+    <div class="card-title">Animasi Pergeseran Bit</div>
+    <div style="margin-bottom:6px"><div class="label">Sebelum Shift</div></div>
+    <div class="shift-track" id="sh-before"></div>
+    <div style="text-align:center;margin:10px 0;font-size:22px;color:var(--blue);" id="sh-arrow">↓</div>
+    <div style="margin-bottom:6px"><div class="label">Sesudah Shift</div></div>
+    <div class="shift-track" id="sh-after"></div>
+    <div id="sh-info" class="warn-box" style="margin-top:14px;font-size:12px;"></div>
+  </div>
+
+  <!-- TABEL SHIFT -->
+  <div class="card">
+    <div class="card-title">Ringkasan Jenis Operasi Shift</div>
+    <table class="tbl">
+      <thead><tr><th>Jenis</th><th>Arah</th><th>Efek Matematika</th><th>Contoh input 11 / input -11</th><th>Kegunaan</th></tr></thead>
+      <tbody>
+        <tr><td><strong>LSL</strong></td><td>← Kiri</td><td>× 2 per posisi</td><td>11 LSL 1 → 22 | −11 LSL 1 → −22 (dalam 8-bit)</td><td>Perkalian cepat dengan pangkat 2</td></tr>
+        <tr><td><strong>LSR</strong></td><td>→ Kanan</td><td>÷ 2 per posisi</td><td>11 LSR 1 → 5 | −11 LSR 1 → 122 (unsigned!)</td><td>Pembagian unsigned cepat</td></tr>
+        <tr><td><strong>ASR</strong></td><td>→ Kanan</td><td>÷ 2, tanda dijaga</td><td>ASR 1 → MSB tetap</td><td>Pembagian signed (negatif tetap negatif)</td></tr>
+        <tr><td><strong>ROL</strong></td><td>↺ Kiri</td><td>Sirkular, no bit loss</td><td>MSB masuk ke LSB</td><td>Kriptografi, CRC</td></tr>
+        <tr><td><strong>ROR</strong></td><td>↻ Kanan</td><td>Sirkular, no bit loss</td><td>LSB masuk ke MSB</td><td>Kriptografi, checksum</td></tr>
+      </tbody>
+    </table>
+    <div class="info-box" style="margin-top:12px;font-size:12px;">
+      <strong>Tips Compiler:</strong> Compiler modern otomatis mengganti <code>x * 8</code> menjadi <code>x &lt;&lt; 3</code> (Logical Shift Left 3) di kode assembly — teknik ini disebut <em>strength reduction optimization</em>. Shift jauh lebih cepat: hanya 1 clock cycle vs puluhan cycle untuk perkalian.
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- TAB 4 — PERKALIAN BINER                      -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="tab-kali" class="tab-content">
+  <div class="card-row col2">
+    <div class="card">
+      <div class="card-title">Input Perkalian — <span id="mul-range-title">Shift-and-Add (0 s/d 7)</span></div>
+      <div style="margin-bottom:12px">
+        <div class="label">Multiplicand (A) <span id="mul-a-range" style="color:var(--muted);font-weight:400;">— 0 s/d 7</span></div>
+        <input class="num-input" id="mul-a" type="number" min="0" max="7" value="" placeholder="0 s/d 7" oninput="validateMulInput()">
+        <div id="mul-a-err" style="color:#b33;font-size:11px;margin-top:4px;display:none;"></div>
+      </div>
+      <div style="margin-bottom:12px">
+        <div class="label">Multiplier (B) <span id="mul-b-range" style="color:var(--muted);font-weight:400;">— 0 s/d 7</span></div>
+        <input class="num-input" id="mul-b" type="number" min="0" max="7" value="" placeholder="0 s/d 7" oninput="validateMulInput()">
+        <div id="mul-b-err" style="color:#b33;font-size:11px;margin-top:4px;display:none;"></div>
+      </div>
+      <div class="btn-row" style="margin-bottom:10px">
+        <button class="op-btn active" id="mop-shift" onclick="setMulOp('shift')">Shift-and-Add</button>
+        <button class="op-btn" id="mop-booth" onclick="setMulOp('booth')">Algoritma Booth</button>
+      </div>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="btn btn-green" style="flex:1;font-size:14px;padding:12px;" onclick="mulCalc()">▶ Mulai Simulasi</button>
+        <button class="btn btn-secondary" style="padding:12px 18px;" onclick="resetMul()" title="Reset">↺ Reset</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Hasil</div>
+      <div class="val-display" id="mul-result">—</div>
+      <div class="val-sub" id="mul-result-bin">—</div>
+      <div id="mul-desc" class="info-box" style="margin-top:12px;font-size:12px;"></div>
+    </div>
+  </div>
+
+  <!-- SHIFT-AND-ADD STEPS -->
+  <div class="card" id="mul-shift-card">
+    <div class="card-title">Langkah Shift-and-Add</div>
+    <div class="info-box" style="margin-bottom:14px;font-size:12px;">
+      <strong>Metode Shift-and-Add</strong> bekerja seperti perkalian bersusun yang dipelajari di sekolah dasar, namun dalam biner. Setiap bit multiplier diperiksa satu per satu dari kanan ke kiri — jika bit = 1, tambahkan multiplicand yang sudah digeser sesuai posisinya; jika bit = 0, lewati. Cocok untuk bilangan <em>unsigned (positif)</em>. Untuk bilangan negatif, gunakan Algoritma Booth.
+    </div>
+    <table class="tbl" id="mul-shift-tbl">
+      <thead><tr><th>Langkah</th><th>Operasi</th><th>Hasil Parsial (8-bit)</th><th>Penjelasan</th></tr></thead>
+      <tbody id="mul-shift-body"></tbody>
+    </table>
+  </div>
+
+  <!-- BOOTH STEPS -->
+  <div class="card" id="mul-booth-card" style="display:none">
+    <div class="card-title">Langkah Algoritma Booth</div>
+    <div class="info-box" style="margin-bottom:14px;font-size:12px;">
+      <strong>Algoritma Booth</strong> dirancang untuk perkalian bilangan <em>bertanda (signed)</em>. Periksa dua bit terakhir (Q0, Q-1) multiplier di setiap iterasi untuk menentukan: tambah, kurangi, atau hanya shift.
+    </div>
+    <table class="booth-tbl" id="mul-booth-tbl">
+      <thead><tr><th>Iterasi</th><th>Q0</th><th>Q-1</th><th>Operasi</th><th>Accumulator</th><th>Q (Multiplier)</th><th>Q-1</th></tr></thead>
+      <tbody id="mul-booth-body"></tbody>
+    </table>
+    <div class="warn-box" style="margin-top:12px;font-size:12px;" id="booth-result-box"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Perbandingan Metode Perkalian</div>
+    <table class="tbl">
+      <thead><tr><th>Aspek</th><th>Shift-and-Add</th><th>Algoritma Booth</th></tr></thead>
+      <tbody>
+        <tr><td>Cocok untuk</td><td>Bilangan unsigned (0 ke atas)</td><td>Bilangan signed (positif & negatif)</td></tr>
+        <tr><td>Cara kerja</td><td>Cek setiap bit multiplier, shift & tambah jika bit = 1</td><td>Cek pasangan bit Q0,Q-1 — tambah, kurangi, atau hanya shift</td></tr>
+        <tr><td>Efisiensi</td><td>Selalu n iterasi (n = jumlah bit)</td><td>Lebih efisien untuk deretan bit 1 yang panjang</td></tr>
+        <tr><td>Implementasi</td><td>Sederhana</td><td>Standar industri hardware modern</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════
+function toBin(n, bits) {
+  n = ((n % (1 << bits)) + (1 << bits)) % (1 << bits);
+  return n.toString(2).padStart(bits, '0');
+}
+function toSigned(n, bits) {
+  if (n >= (1 << (bits - 1))) return n - (1 << bits);
+  return n;
+}
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+function renderBits(containerId, binStr, cls) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+  for (let i = 0; i < binStr.length; i++) {
+    const b = document.createElement('div');
+    b.className = 'bit ' + (cls ? cls(binStr[i], i) : (binStr[i]==='1'?'b1':'b0'));
+    b.textContent = binStr[i];
+    el.appendChild(b);
+  }
+}
+
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+function setFlag(id, val) {
+  const el = document.getElementById('flag-' + id);
+  const vEl = document.getElementById('fv-' + id);
+  vEl.textContent = val;
+  el.classList.toggle('active', val === 1);
+}
+
+function updateFlagExplain(z, c, o, s, a, b, op, rawResult) {
+  const box = document.getElementById('flag-explain-box');
+  box.style.display = 'block';
+
+  const opSymbol = op === 'add' ? '+' : '−';
+  const actual   = op === 'add' ? (a + b) : (a - b);
+
+  // Buat penjelasan per flag
+  const rows = [];
+
+  // ZERO FLAG
+  if (z === 1) {
+    rows.push({
+      flag: 'Z=1 — Zero Flag AKTIF',
+      color: '#c87800',
+      bg: '#fff9e6',
+      border: '#FAC775',
+      text: `Hasil dalam 8-bit = <strong>00000000 (nol)</strong>. Ini terjadi karena ${a} ${opSymbol} ${b} = ${actual}, yang butuh lebih dari 8-bit, sehingga bit kelebihan dibuang dan sisanya = 0.`
+    });
+  } else {
+    rows.push({
+      flag: 'Z=0 — Zero Flag tidak aktif',
+      color: '#555', bg: '#f4f6fa', border: '#e0e4ef',
+      text: `Hasil tidak nol. ${a} ${opSymbol} ${b} = ${rawResult} dalam 8-bit (${actual} secara matematis).`
+    });
+  }
+
+  // CARRY FLAG
+  if (c === 1) {
+    rows.push({
+      flag: 'C=1 — Carry Flag AKTIF',
+      color: '#c87800', bg: '#fff9e6', border: '#FAC775',
+      text: `Ada <strong>bit yang keluar (tumpah)</strong> dari posisi bit ke-7. Artinya hasil ${a} ${opSymbol} ${b} = ${actual} tidak muat dalam 8-bit (maks 255). Ini sinyal <strong>overflow unsigned</strong>.`
+    });
+  } else {
+    rows.push({
+      flag: 'C=0 — Carry Flag tidak aktif',
+      color: '#555', bg: '#f4f6fa', border: '#e0e4ef',
+      text: `Tidak ada bit yang tumpah. Hasil ${rawResult} masih dalam batas 8-bit (0–255).`
+    });
+  }
+
+  // OVERFLOW FLAG
+  if (o === 1) {
+    rows.push({
+      flag: 'O=1 — Overflow Flag AKTIF',
+      color: '#b33', bg: '#fff0f0', border: '#F28B82',
+      text: `<strong>Overflow signed terdeteksi!</strong> Dua bilangan bertanda dengan tanda <em>sama</em> dijumlahkan, tapi hasilnya bertanda <em>berbeda</em>. Contoh: positif + positif = negatif, atau negatif + negatif = positif. Hasil <strong>tidak valid</strong> dalam aritmetika signed 8-bit.`
+    });
+  } else {
+    rows.push({
+      flag: 'O=0 — Overflow Flag tidak aktif',
+      color: '#555', bg: '#f4f6fa', border: '#e0e4ef',
+      text: `Tidak ada overflow signed. Tanda hasil konsisten dengan tanda operand. Catatan: Overflow ≠ Carry — Overflow khusus untuk bilangan <em>bertanda (signed)</em>, Carry untuk <em>unsigned</em>.`
+    });
+  }
+
+  // SIGN FLAG
+  if (s === 1) {
+    rows.push({
+      flag: 'S=1 — Sign Flag AKTIF',
+      color: '#185fa5', bg: '#e8f0fe', border: '#5FCBEF',
+      text: `Bit paling kiri (MSB) hasil = <strong>1</strong>, yang dalam representasi <em>signed</em> berarti hasilnya adalah bilangan <strong>negatif</strong>.`
+    });
+  } else {
+    rows.push({
+      flag: 'S=0 — Sign Flag tidak aktif',
+      color: '#555', bg: '#f4f6fa', border: '#e0e4ef',
+      text: `Bit paling kiri (MSB) hasil = <strong>0</strong>, yang berarti hasilnya adalah bilangan <strong>positif</strong> dalam representasi signed.`
+    });
+  }
+
+  box.innerHTML = rows.map(r => `
+    <div style="border:1.5px solid ${r.border};background:${r.bg};border-radius:8px;padding:9px 13px;margin-bottom:8px;">
+      <div style="font-weight:700;color:${r.color};margin-bottom:3px;">${r.flag}</div>
+      <div style="color:#333;">${r.text}</div>
+    </div>`).join('');
+}
+
+function addLog(container, text, cls) {
+  const el = document.getElementById(container);
+  const d = document.createElement('div');
+  d.className = 'log-line ' + (cls || '');
+  d.innerHTML = text;
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+}
+
+// ══════════════════════════════════════════════
+// TAB 1 — FULL ADDER & ARITMETIKA
+// ══════════════════════════════════════════════
+let adderOp = 'add';
+
+function setAdderOp(op) {
+  adderOp = op;
+  document.getElementById('btn-add').className = 'op-btn ' + (op === 'add' ? 'active' : '');
+  document.getElementById('btn-sub').className = 'op-btn ' + (op === 'sub' ? 'active' : '');
+  // TIDAK auto-run — harus klik Mulai Simulasi
+}
+
+function adderCalc() {
+  // Support signed -128..127: konversi ke unsigned 8-bit untuk operasi bit
+  const rawA = clamp(parseInt(document.getElementById('add-a').value) || 0, -128, 127);
+  const rawB = clamp(parseInt(document.getElementById('add-b').value) || 0, -128, 127);
+  // Representasi unsigned 8-bit (Two's complement otomatis untuk negatif)
+  let a = rawA < 0 ? rawA + 256 : rawA;
+  let b = rawB < 0 ? rawB + 256 : rawB;
+
+  const log = document.getElementById('adder-log');
+  log.innerHTML = '';
+
+  let opB = b;
+  let opLabel = `${rawA} + ${rawB}`;
+
+  if (adderOp === 'add') {
+    addLog('adder-log', `━━━ OPERASI ADD: ${rawA} + ${rawB} ━━━`, 'log-info');
+    addLog('adder-log', `  A = ${rawA}  →  8-bit: ${toBin(a, 8)}`, '');
+    addLog('adder-log', `  B = ${rawB}  →  8-bit: ${toBin(b, 8)}`, '');
+    if (rawA < 0) addLog('adder-log', `  (A negatif → representasi Two's Complement: ${toBin(a,8)})`, 'log-info');
+    if (rawB < 0) addLog('adder-log', `  (B negatif → representasi Two's Complement: ${toBin(b,8)})`, 'log-info');
+    addLog('adder-log', `  Carry awal (Cin bit-0) = 0`, '');
+  }
+
+  if (adderOp === 'sub') {
+    opB = ((~b) & 0xFF) + 1;
+    addLog('adder-log', `━━━ OPERASI SUB: ${rawA} − ${rawB} ━━━`, 'log-info');
+    addLog('adder-log', `  A = ${rawA}  →  8-bit: ${toBin(a, 8)}`, '');
+    addLog('adder-log', `  Langkah 1: Ubah B=${rawB} ke Two's Complement`, 'log-info');
+    addLog('adder-log', `    B asli       = ${toBin(b, 8)}  (${rawB})`, '');
+    addLog('adder-log', `    NOT B        = ${toBin((~b)&0xFF, 8)}`, '');
+    addLog('adder-log', `    NOT B + 1    = ${toBin(opB&0xFF, 8)}  (= −${rawB})`, 'log-ok');
+    addLog('adder-log', `  Langkah 2: Hitung ${rawA} + (−${rawB})`, 'log-info');
+    opLabel = `${rawA} − ${rawB} = ${rawA} + (−${rawB})`;
+  }
+
+  // 8-bit ripple carry
+  const aBin = toBin(a, 8);
+  const bBin = toBin(opB & 0xFF, 8);
+  let carry = 0;
+  let sumBits = '';
+  let carries = [];
+  let steps = [];
+
+  for (let i = 7; i >= 0; i--) {
+    const bitA = parseInt(aBin[i]);
+    const bitB = parseInt(bBin[i]);
+    const total = bitA + bitB + carry;
+    const sum = total % 2;
+    const cout = Math.floor(total / 2);
+    steps.unshift({ pos: i, a: bitA, b: bitB, cin: carry, sum, cout });
+    sumBits = sum.toString() + sumBits;
+    carries.unshift(carry);
+    carry = cout;
+  }
+
+  const rawResult = parseInt(sumBits, 2);
+  const finalCarry = carry;
+
+  // Flags
+  const zFlag = rawResult === 0 ? 1 : 0;
+  const cFlag = finalCarry;
+  const sFlag = parseInt(sumBits[0]);
+
+  // Overflow: sign(A) == sign(B) but sign(result) differs
+  const signA = parseInt(aBin[0]);
+  const signOpB = parseInt(bBin[0]);
+  const signR = sFlag;
+  const oFlag = (signA === signOpB && signR !== signA) ? 1 : 0;
+
+  // Result display — ditampilkan setelah animasi selesai (di dalam setTimeout terakhir)
+  const displayResult = adderOp === 'sub' ? (rawA - rawB) : (rawA + rawB);
+
+  // Kumpulkan semua baris log
+  const logLines = [];
+  logLines.push({ text: `  ┌─────────────────────────────────────────────────┐`, cls: 'log-info' });
+  logLines.push({ text: `  │  Bit  │  A  │  B  │ Cin │ Sum │ Cout │ Total   │`, cls: 'log-info' });
+  logLines.push({ text: `  ├─────────────────────────────────────────────────┤`, cls: 'log-info' });
+  steps.forEach(s => {
+    const note = s.cout ? ' ← carry!' : '';
+    logLines.push({
+      text: `  │  ${String(s.pos).padStart(1)}    │  ${s.a}  │  ${s.b}  │  ${s.cin}  │  ${s.sum}  │   ${s.cout}    │ ${s.a}+${s.b}+${s.cin}=${s.a+s.b+s.cin}${note.padEnd(9)} │`,
+      cls: s.cout ? 'log-warn' : ''
+    });
+  });
+  logLines.push({ text: `  └─────────────────────────────────────────────────┘`, cls: 'log-info' });
+  logLines.push({ text: `  Rangkaian hasil  : ${sumBits}`, cls: '' });
+  logLines.push({ text: `  Desimal unsigned : ${rawResult}`, cls: '' });
+  logLines.push({ text: `  Desimal signed   : ${toSigned(rawResult, 8)}`, cls: '' });
+  if (finalCarry) logLines.push({ text: `  ⚠ Carry keluar dari bit 7 → Carry Flag = 1`, cls: 'log-warn' });
+  if (oFlag)      logLines.push({ text: `  ⚠ OVERFLOW! Positif+positif=negatif (atau sebaliknya)`, cls: 'log-err' });
+  if (zFlag)      logLines.push({ text: `  ℹ Zero Flag = 1 → hasil 8-bit = 0`, cls: 'log-info' });
+  logLines.push({ text: `  ✓ Selesai — Flags: Z=${zFlag} C=${cFlag} O=${oFlag} S=${sFlag}`, cls: 'log-ok' });
+
+  // Animasi langkah per langkah
+  const logEl = document.getElementById('adder-log');
+  logEl.innerHTML = '';
+  logLines.forEach((line, i) => {
+    setTimeout(() => {
+      addLog('adder-log', line.text, line.cls);
+      // Set flags + explain hanya setelah baris terakhir
+      if (i === logLines.length - 1) {
+        setFlag('z', zFlag);
+        setFlag('c', cFlag);
+        setFlag('o', oFlag);
+        setFlag('s', sFlag);
+        updateFlagExplain(zFlag, cFlag, oFlag, sFlag, rawA, rawB, adderOp, rawResult);
+        document.getElementById('add-result').textContent = displayResult;
+        document.getElementById('add-result-bin').textContent = `Biner 8-bit: ${sumBits}${finalCarry ? ' (carry keluar!)' : ''}`;
+        document.getElementById('add-result-desc').textContent = opLabel + ' = ' + displayResult;
+      }
+    }, i * 120);
+  });
+}
+
+// ══════════════════════════════════════════════
+// TAB 2 — LOGIKA & MASKING
+// ══════════════════════════════════════════════
+let logOp = 'AND';
+
+function setLogOp(op) {
+  logOp = op;
+  document.querySelectorAll('.op-btn[id^="lop-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('lop-' + op).classList.add('active');
+  document.getElementById('log-b-wrap').style.opacity = op === 'NOT' ? '0.35' : '1';
+  document.getElementById('log-b-vis').style.display = op === 'NOT' ? 'none' : 'block';
+  const la = parseInt(document.getElementById('log-a').value);
+  if (!isNaN(la)) logCalc();
+}
+
+function logCalc() {
+  const a = clamp(parseInt(document.getElementById('log-a').value) || 0, 0, 255);
+  const b = clamp(parseInt(document.getElementById('log-b').value) || 0, 0, 255);
+  let result;
+  switch (logOp) {
+    case 'AND': result = a & b; break;
+    case 'OR':  result = a | b; break;
+    case 'XOR': result = a ^ b; break;
+    case 'NOT': result = (~a) & 0xFF; break;
+  }
+
+  document.getElementById('log-result').textContent = result;
+  document.getElementById('log-result-bin').textContent = `Biner: ${toBin(result, 8)}`;
+  document.getElementById('log-res-label').textContent = `${logOp} → Hasil`;
+
+  const descs = {
+    AND: `AND: bit hasil = 1 <em>hanya jika kedua</em> bit input = 1. Digunakan untuk <strong>mengecek atau mematikan bit tertentu</strong> (bit masking).`,
+    OR:  `OR: bit hasil = 1 <em>jika minimal satu</em> bit input = 1. Digunakan untuk <strong>menyalakan bit tertentu</strong> tanpa mengubah bit lain.`,
+    XOR: `XOR: bit hasil = 1 <em>jika kedua bit berbeda</em>. Digunakan untuk <strong>toggle bit, enkripsi dasar, dan deteksi error</strong>.`,
+    NOT: `NOT: <em>membalik semua bit</em>. Digunakan dalam Two's Complement (langkah pertama: NOT A, lalu +1 untuk mendapat −A).`,
+  };
+  document.getElementById('log-desc').innerHTML = descs[logOp];
+
+  renderBits('log-bits-a', toBin(a, 8));
+  renderBits('log-bits-b', toBin(b, 8));
+  renderBits('log-bits-res', toBin(result, 8), (bit) => bit === '1' ? 'b1' : 'b0');
+}
+
+
+
+// ══════════════════════════════════════════════
+// TAB 3 — SHIFT
+// ══════════════════════════════════════════════
+let shiftOp = 'LSL';
+
+function setShiftOp(op) {
+  shiftOp = op;
+  document.querySelectorAll('.op-btn[id^="sop-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('sop-' + op).classList.add('active');
+  const sv = parseInt(document.getElementById('sh-val').value);
+  if (!isNaN(sv)) shiftCalc();
+}
+
+function shiftCalc() {
+  const rawVal = clamp(parseInt(document.getElementById('sh-val').value) || 0, -128, 127);
+  const pos    = clamp(parseInt(document.getElementById('sh-pos').value) || 1, 1, 7);
+  // Konversi ke unsigned 8-bit untuk operasi bit
+  const val    = rawVal < 0 ? rawVal + 256 : rawVal;
+  const before = toBin(val, 8);
+  let result, afterBin, mathDesc, infoHtml, displayResult;
+
+  switch (shiftOp) {
+    case 'LSL':
+      result = (val << pos) & 0xFF;
+      afterBin = toBin(result, 8);
+      displayResult = toSigned(result, 8);
+      mathDesc = `LSL ${pos}: ${rawVal} × ${Math.pow(2,pos)} = ${rawVal * Math.pow(2,pos)} → dalam 8-bit signed: ${displayResult}`;
+      infoHtml = `<strong>Logical Shift Left ${pos}</strong>: Bit digeser kiri, bit kanan diisi 0, bit kiri dibuang. Efek: ×${Math.pow(2,pos)}. ${result !== (val << pos) ? '⚠️ Overflow!' : ''}`;
+      break;
+    case 'LSR':
+      result = (val >> pos) & 0xFF;
+      afterBin = toBin(result, 8);
+      displayResult = result;
+      mathDesc = `LSR ${pos}: ${val} (unsigned) ÷ ${Math.pow(2,pos)} = ${Math.floor(val/Math.pow(2,pos))}`;
+      infoHtml = `<strong>Logical Shift Right ${pos}</strong>: Bit digeser kanan, bit kiri diisi 0. Untuk bilangan <em>unsigned</em> — negatif signed tidak dipertahankan.`;
+      break;
+    case 'ASR': {
+      const signedVal = rawVal; // sudah signed dari input
+      result = signedVal >> pos;
+      const resultU = result < 0 ? result + 256 : result;
+      afterBin = toBin(resultU, 8);
+      displayResult = result;
+      mathDesc = `ASR ${pos}: ${signedVal} ÷ ${Math.pow(2,pos)} = ${Math.floor(signedVal/Math.pow(2,pos))} (signed, tanda dipertahankan)`;
+      infoHtml = `<strong>Arithmetic Shift Right ${pos}</strong>: MSB (bit tanda) <em>dipertahankan</em>. Bilangan negatif tetap negatif — ini yang membedakan ASR dari LSR.`;
+      break;
+    }
+    case 'ROL':
+      result = ((val << pos) | (val >> (8 - pos))) & 0xFF;
+      afterBin = toBin(result, 8);
+      displayResult = toSigned(result, 8);
+      mathDesc = `ROL ${pos}: rotasi kiri ${pos} posisi, bit MSB masuk ke LSB`;
+      infoHtml = `<strong>Rotate Left ${pos}</strong>: Bit yang keluar kiri masuk ke kanan. <em>Tidak ada bit hilang</em>.`;
+      break;
+    case 'ROR':
+      result = ((val >> pos) | (val << (8 - pos))) & 0xFF;
+      afterBin = toBin(result, 8);
+      displayResult = toSigned(result, 8);
+      mathDesc = `ROR ${pos}: rotasi kanan ${pos} posisi, bit LSB masuk ke MSB`;
+      infoHtml = `<strong>Rotate Right ${pos}</strong>: Bit yang keluar kanan masuk ke kiri. <em>Tidak ada bit hilang</em>.`;
+      break;
+  }
+
+  document.getElementById('sh-result').textContent = displayResult;
+  document.getElementById('sh-result-bin').textContent = `Biner: ${afterBin}`;
+  document.getElementById('sh-math').innerHTML = `<strong>Operasi:</strong> ${mathDesc}`;
+  document.getElementById('sh-info').innerHTML = infoHtml;
+
+  // Arrow label
+  const arrows = {LSL:'← ← ←', LSR:'→ → →', ASR:'→ → → (MSB tetap)', ROL:'↺ ↺ ↺', ROR:'↻ ↻ ↻'};
+  document.getElementById('sh-arrow').textContent = arrows[shiftOp];
+
+  // Render before/after bits
+  const bef = document.getElementById('sh-before');
+  const aft = document.getElementById('sh-after');
+  bef.innerHTML = '';
+  aft.innerHTML = '';
+  before.split('').forEach(bit => {
+    const d = document.createElement('div');
+    d.className = 'shift-bit ' + (bit === '1' ? 'moved' : '');
+    d.textContent = bit;
+    bef.appendChild(d);
+  });
+  afterBin.split('').forEach((bit, i) => {
+    const d = document.createElement('div');
+    d.className = 'shift-bit ' + (bit === '1' ? 'moved' : 'filled');
+    d.textContent = bit;
+    aft.appendChild(d);
+  });
+}
+
+// ══════════════════════════════════════════════
+// TAB 4 — PERKALIAN BINER
+// ══════════════════════════════════════════════
+let mulOp = 'shift';
+
+function setMulOp(op) {
+  mulOp = op;
+
+  // Toggle tombol aktif
+  document.querySelectorAll('.op-btn[id^="mop-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('mop-' + op).classList.add('active');
+
+  // Tampilkan card yang sesuai
+  document.getElementById('mul-shift-card').style.display = op === 'shift' ? 'block' : 'none';
+  document.getElementById('mul-booth-card').style.display = op === 'booth' ? 'block' : 'none';
+
+  // Update label & range sesuai metode
+  const isBooth = op === 'booth';
+  const rangeText = isBooth ? '(−8 s/d 7, signed)' : '(0 s/d 7, unsigned)';
+  const placeholder = isBooth ? '-8 s/d 7' : '0 s/d 7';
+  const minVal = isBooth ? '-8' : '0';
+
+  document.getElementById('mul-a-range').textContent = rangeText;
+  document.getElementById('mul-b-range').textContent = rangeText;
+  document.getElementById('mul-a').placeholder = placeholder;
+  document.getElementById('mul-b').placeholder = placeholder;
+  document.getElementById('mul-a').min = minVal;
+  document.getElementById('mul-b').min = minVal;
+  document.getElementById('mul-range-title').textContent =
+    isBooth ? 'Algoritma Booth (−8 s/d 7, signed)' : 'Shift-and-Add (0 s/d 7, unsigned)';
+
+  // Reset input, error, dan hasil saat ganti metode
+  document.getElementById('mul-a').value = '';
+  document.getElementById('mul-b').value = '';
+  document.getElementById('mul-a').style.borderColor = '';
+  document.getElementById('mul-b').style.borderColor = '';
+  document.getElementById('mul-a-err').style.display = 'none';
+  document.getElementById('mul-b-err').style.display = 'none';
+  document.getElementById('mul-result').textContent = '—';
+  document.getElementById('mul-result-bin').textContent = '';
+  document.getElementById('mul-desc').innerHTML = '';
+  document.getElementById('mul-shift-body').innerHTML = '';
+  document.getElementById('mul-booth-body').innerHTML = '';
+}
+
+function validateMulInput() {
+  const a = parseInt(document.getElementById('mul-a').value);
+  const b = parseInt(document.getElementById('mul-b').value);
+  const errA = document.getElementById('mul-a-err');
+  const errB = document.getElementById('mul-b-err');
+  const inputA = document.getElementById('mul-a');
+  const inputB = document.getElementById('mul-b');
+  const isBooth = mulOp === 'booth';
+  const minV = isBooth ? -8 : 0;
+  const maxV = 7;
+  const rangeMsg = isBooth ? '−8 s/d 7' : '0 s/d 7';
+
+  const aInvalid = !isNaN(a) && (a < minV || a > maxV);
+  const bInvalid = !isNaN(b) && (b < minV || b > maxV);
+
+  errA.textContent = aInvalid ? `⚠ Nilai harus antara ${rangeMsg}` : '';
+  errB.textContent = bInvalid ? `⚠ Nilai harus antara ${rangeMsg}` : '';
+  errA.style.display = aInvalid ? 'block' : 'none';
+  errB.style.display = bInvalid ? 'block' : 'none';
+  inputA.style.borderColor = aInvalid ? '#b33' : '';
+  inputB.style.borderColor = bInvalid ? '#b33' : '';
+}
+
+function mulCalc() {
+  // signed 4-bit: -8..7
+  const rawA = parseInt(document.getElementById('mul-a').value);
+  const rawB = parseInt(document.getElementById('mul-b').value);
+
+  // Tolak jika di luar range
+  if (isNaN(rawA) || isNaN(rawB)) {
+    document.getElementById('mul-desc').innerHTML = '<div style="color:#b33;font-weight:700;">⚠ Isi nilai A dan B terlebih dahulu.</div>';
+    return;
+  }
+  const minRange = mulOp === 'booth' ? -8 : 0;
+  if (rawA < minRange || rawA > 7 || rawB < minRange || rawB > 7) {
+    document.getElementById('mul-result').textContent = '✗';
+    document.getElementById('mul-result-bin').textContent = 'Nilai di luar range';
+    document.getElementById('mul-desc').innerHTML =
+      `<div style="border:2px solid var(--red);background:#fff0f0;border-radius:8px;padding:12px 14px;">
+        <div style="font-weight:700;color:#b33;margin-bottom:6px;">⚠ Nilai di Luar Range</div>
+        <div style="color:#333;font-size:12px;line-height:1.7;">
+          Input harus antara <strong>−8 s/d 7</strong> (signed 4-bit).<br>
+          ${rawA < -8 || rawA > 7 ? `A = <strong>${rawA}</strong> tidak valid.<br>` : ''}
+          ${rawB < -8 || rawB > 7 ? `B = <strong>${rawB}</strong> tidak valid.` : ''}
+        </div>
+      </div>`;
+    return;
+  }
+  const a = rawA;
+  const b = rawB;
+
+  // ── BLOKIR Shift-and-Add jika ada input negatif
+  if (mulOp === 'shift' && (a < 0 || b < 0)) {
+    document.getElementById('mul-result').textContent = '✗';
+    document.getElementById('mul-result-bin').textContent = 'Input tidak valid untuk metode ini';
+    document.getElementById('mul-desc').innerHTML =
+      `<div style="border:2px solid var(--red);background:#fff0f0;border-radius:8px;padding:12px 14px;">
+        <div style="font-weight:700;color:#b33;margin-bottom:6px;">⚠ Input Negatif Tidak Didukung</div>
+        <div style="color:#333;font-size:12px;line-height:1.7;">
+          Metode <strong>Shift-and-Add</strong> hanya bekerja untuk bilangan <em>unsigned (positif)</em>.<br>
+          Input A = <strong>${a}</strong> atau B = <strong>${b}</strong> mengandung bilangan negatif.<br><br>
+          <strong>Solusi:</strong> Gunakan metode <strong>Algoritma Booth</strong> yang dirancang khusus
+          untuk menangani bilangan bertanda (signed), baik positif maupun negatif.
+        </div>
+      </div>`;
+    document.getElementById('mul-shift-body').innerHTML =
+      `<tr><td colspan="4" style="text-align:center;color:#b33;padding:20px;">
+        ⚠ Tidak dapat diproses — masukkan bilangan positif (0–7) untuk Shift-and-Add
+       </td></tr>`;
+    return; // hentikan eksekusi
+  }
+
+  const result = a * b;
+
+  // representasi unsigned 4-bit untuk tampilan biner
+  const aU = a < 0 ? a + 16 : a;
+  const bU = b < 0 ? b + 16 : b;
+  const rU = result < 0 ? result + 256 : result;
+
+  document.getElementById('mul-result').textContent = result;
+  document.getElementById('mul-result-bin').textContent =
+    `${toBin(aU,4)} × ${toBin(bU,4)} = ${result} (${toBin(rU < 0 ? rU+256 : rU, 8)})`;
+
+  if (mulOp === 'shift') {
+    shiftAndAdd(a, b, aU, bU);
+  } else {
+    boothAlgo(a, b, aU, bU);
+  }
+}
+
+function shiftAndAdd(a, b, aU, bU) {
+  // Shift-and-Add bekerja untuk unsigned, tampilkan catatan jika ada negatif
+  const aAbs = Math.abs(a); const bAbs = Math.abs(b);
+  const aSign = a < 0; const bSign = b < 0;
+  const workA = aU !== undefined ? aU : a;
+  const workB = bU !== undefined ? bU : b;
+  const aBin = toBin(workA, 4);
+  const bBin = toBin(workB, 4);
+  const tbody = document.getElementById('mul-shift-body');
+  tbody.innerHTML = '';
+
+  let partials = [];
+  let acc = 0;
+  let desc = '';
+
+  for (let i = 3; i >= 0; i--) {
+    const bit = parseInt(bBin[i]);
+    const shift = 3 - i;
+    const partial = bit === 1 ? (a << shift) : 0;
+    partials.push(partial);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${4-i}</td>
+      <td>${aBin} × bit ${shift} (=${bit})</td>
+      <td style="font-family:monospace">${toBin(partial, 8)}</td>
+      <td>${bit === 1 ? `Bit=1: tambah ${toBin(a,4)} digeser ${shift} posisi kiri` : 'Bit=0: tidak ada penambahan, geser saja'}</td>`;
+    tbody.appendChild(tr);
+  }
+
+  acc = partials.reduce((s, v) => s + v, 0);
+  const total = document.createElement('tr');
+  total.className = 'hl';
+  total.innerHTML = `<td><strong>TOTAL</strong></td><td>Jumlahkan semua hasil parsial</td><td style="font-family:monospace"><strong>${toBin(acc,8)}</strong></td><td><strong>${acc} ✓</strong></td>`;
+  tbody.appendChild(total);
+
+  document.getElementById('mul-desc').innerHTML = `<strong>Shift-and-Add:</strong> Setiap bit multiplier (${bBin}) diperiksa dari kanan ke kiri. Jika bit=1, tambahkan multiplicand yang sudah digeser sesuai posisi. Jika bit=0, lewati. Jumlahkan semua hasil parsial.${(a<0||b<0) ? ' <span style="color:#c87800">⚠ Untuk bilangan negatif, gunakan Algoritma Booth yang lebih akurat.</span>' : ''}`;
+}
+
+function boothAlgo(a, b, aU, bU) {
+  // Signed Booth — treat as 4-bit signed
+  const M = toSigned(a, 4);  // multiplicand
+  const Q = b;               // multiplier (unsigned display, treat signed)
+  const tbody = document.getElementById('mul-booth-body');
+  tbody.innerHTML = '';
+
+  let ACC = 0;   // accumulator (4-bit)
+  let QReg = Q;  // multiplier register
+  let Qm1 = 0;   // extra Q-1 bit
+
+  // Init row
+  const init = document.createElement('tr');
+  init.innerHTML = `<td>Init</td><td>—</td><td>${Qm1}</td><td>—</td><td style="font-family:monospace">${toBin(ACC,4)}</td><td style="font-family:monospace">${toBin(QReg,4)}</td><td>${Qm1}</td>`;
+  tbody.appendChild(init);
+
+  const ops = { '00': 'Shift (tidak ada transisi)', '01': 'Tambah M, lalu Shift', '10': 'Kurangi M, lalu Shift', '11': 'Shift (di tengah blok 1)' };
+
+  for (let iter = 0; iter < 4; iter++) {
+    const Q0 = QReg & 1;
+    const pair = `${Q0}${Qm1}`;
+    let op = ops[pair];
+    let opShort = pair;
+
+    if (pair === '01') ACC = (ACC + M) & 0xF;
+    else if (pair === '10') ACC = (ACC - M + 16) & 0xF;
+
+    // Arithmetic right shift: {ACC, QReg, Qm1} >> 1, preserve sign of ACC
+    const newQm1 = QReg & 1;
+    const newQ = ((QReg >> 1) | ((ACC & 1) << 3)) & 0xF;
+    const signACC = (ACC >> 3) & 1;
+    const newACC = ((ACC >> 1) | (signACC << 3)) & 0xF;
+
+    const tr = document.createElement('tr');
+    tr.className = iter === 3 ? 'done-row' : 'current';
+    tr.innerHTML = `<td>${iter+1}</td><td>${Q0}</td><td>${Qm1}</td><td>${op}</td><td style="font-family:monospace">${toBin(newACC,4)}</td><td style="font-family:monospace">${toBin(newQ,4)}</td><td>${newQm1}</td>`;
+    tbody.appendChild(tr);
+
+    Qm1 = newQm1;
+    QReg = newQ;
+    ACC = newACC;
+  }
+
+  const finalResult = (ACC << 4) | QReg;
+  const signedResult = toSigned(finalResult, 8);
+  document.getElementById('booth-result-box').innerHTML =
+    `<strong>Hasil Booth:</strong> ACC=${toBin(ACC,4)} | Q=${toBin(QReg,4)} → ${toBin(finalResult,8)} = <strong>${signedResult}</strong><br>
+     Verifikasi: ${toSigned(a,4)} × ${toSigned(b,4)} = ${toSigned(a,4)*toSigned(b,4)}`;
+  document.getElementById('mul-desc').innerHTML = `<strong>Algoritma Booth:</strong> Periksa pasangan bit (Q0, Q-1) setiap iterasi. 00/11 = hanya shift. 01 = tambah M lalu shift. 10 = kurangi M lalu shift. Bekerja untuk bilangan signed secara seragam.`;
+}
+
+// ── INIT
+
+// ══════════════════════════════════════════════
+// RESET FUNCTIONS
+// ══════════════════════════════════════════════
+function resetAdder() {
+  adderOp = 'add';
+  document.getElementById('add-a').value = '';
+  document.getElementById('add-b').value = '';
+  document.getElementById('add-result').textContent = '—';
+  document.getElementById('add-result-bin').textContent = '';
+  document.getElementById('add-result-desc').textContent = '';
+  document.getElementById('adder-log').innerHTML = '<div class="log-line" style="color:#666">Isi angka → pilih operasi → klik ▶ Mulai Simulasi</div>';
+  document.getElementById('flag-explain-box').style.display = 'none';
+  ['z','c','o','s'].forEach(f => {
+    document.getElementById('fv-' + f).textContent = '0';
+    document.getElementById('flag-' + f).classList.remove('active');
+  });
+  document.getElementById('btn-add').className = 'op-btn active';
+  document.getElementById('btn-sub').className = 'op-btn';
+}
+
+function resetLogika() {
+  logOp = 'AND';
+  document.getElementById('log-a').value = '';
+  document.getElementById('log-b').value = '';
+  document.getElementById('log-result').textContent = '—';
+  document.getElementById('log-result-bin').textContent = 'Masukkan nilai A (dan B), pilih operasi, lalu klik ▶ Mulai';
+  document.getElementById('log-desc').innerHTML = '';
+  document.getElementById('log-bits-a').innerHTML = '';
+  document.getElementById('log-bits-b').innerHTML = '';
+  document.getElementById('log-bits-res').innerHTML = '';
+  document.querySelectorAll('.op-btn[id^="lop-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('lop-AND').classList.add('active');
+  document.getElementById('log-b-wrap').style.opacity = '1';
+  document.getElementById('log-b-vis').style.display = 'block';
+}
+
+function resetShift() {
+  shiftOp = 'LSL';
+  document.getElementById('sh-val').value = '';
+  document.getElementById('sh-pos').value = '';
+  document.getElementById('sh-result').textContent = '—';
+  document.getElementById('sh-result-bin').textContent = 'Masukkan nilai dan jumlah posisi, pilih jenis shift, lalu klik ▶ Mulai';
+  document.getElementById('sh-math').innerHTML = '';
+  document.getElementById('sh-info').innerHTML = '';
+  document.getElementById('sh-before').innerHTML = '';
+  document.getElementById('sh-after').innerHTML = '';
+  document.getElementById('sh-arrow').textContent = '↓';
+  document.querySelectorAll('.op-btn[id^="sop-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('sop-LSL').classList.add('active');
+}
+
+function resetMul() {
+  mulOp = 'shift';
+  document.getElementById('mul-a').value = '';
+  document.getElementById('mul-b').value = '';
+  document.getElementById('mul-a').style.borderColor = '';
+  document.getElementById('mul-b').style.borderColor = '';
+  document.getElementById('mul-a-err').style.display = 'none';
+  document.getElementById('mul-b-err').style.display = 'none';
+  // Reset ke Shift-and-Add (default)
+  mulOp = 'shift';
+  document.querySelectorAll('.op-btn[id^="mop-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('mop-shift').classList.add('active');
+  document.getElementById('mul-shift-card').style.display = 'block';
+  document.getElementById('mul-booth-card').style.display = 'none';
+  document.getElementById('mul-a-range').textContent = '− 0 s/d 7 (unsigned)';
+  document.getElementById('mul-b-range').textContent = '− 0 s/d 7 (unsigned)';
+  document.getElementById('mul-a').placeholder = '0 s/d 7';
+  document.getElementById('mul-b').placeholder = '0 s/d 7';
+  document.getElementById('mul-a').min = '0';
+  document.getElementById('mul-b').min = '0';
+  document.getElementById('mul-range-title').textContent = 'Shift-and-Add (0 s/d 7, unsigned)';
+  document.getElementById('mul-result').textContent = '—';
+  document.getElementById('mul-result-bin').textContent = 'Masukkan nilai A dan B, pilih metode, lalu klik ▶ Mulai';
+  document.getElementById('mul-desc').innerHTML = '';
+  document.getElementById('mul-shift-body').innerHTML = '';
+  document.getElementById('mul-booth-body').innerHTML = '';
+  document.getElementById('booth-result-box').innerHTML = '';
+  document.getElementById('mul-shift-card').style.display = 'block';
+  document.getElementById('mul-booth-card').style.display = 'none';
+  document.querySelectorAll('.op-btn[id^="mop-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('mop-shift').classList.add('active');
+}
+
+// Tidak auto-run — mahasiswa harus klik Mulai
+// Reset semua tampilan ke kondisi awal kosong
+document.getElementById('add-result').textContent = '—';
+document.getElementById('add-result-bin').textContent = '';
+document.getElementById('add-result-desc').textContent = '';
+document.getElementById('log-result').textContent = '—';
+document.getElementById('log-result-bin').textContent = 'Masukkan nilai A (dan B), pilih operasi, lalu klik ▶ Mulai';
+document.getElementById('sh-result').textContent = '—';
+document.getElementById('sh-result-bin').textContent = 'Masukkan nilai dan jumlah posisi, pilih jenis shift, lalu klik ▶ Mulai';
+document.getElementById('mul-result').textContent = '—';
+document.getElementById('mul-result-bin').textContent = 'Masukkan nilai A dan B, pilih metode, lalu klik ▶ Mulai';
+</script>
+</body>
+</html>
