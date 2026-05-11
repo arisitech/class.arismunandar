@@ -6,7 +6,7 @@
     { "minggu": 4, "demo": 0, "file": "demo_siskamjar_minggu4.html" },
     { "minggu": 5, "demo": 0, "file": "demo_siskamjar_minggu5.html" },
     { "minggu": 6, "demo": 0, "file": "demo_siskamjar_minggu6.html" },
-    { "minggu": 7, "demo": 0, "file": "" }
+    { "minggu": 7, "demo": 0, "file": "demo_siskamjar_modul7.html" }
   ],
   "setelah_uts": [
     { "minggu": 9,  "demo": 0, "file": "" },
