@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Packet Journey Visualizer — VPN Demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --navy:    #0D1B2A;
+    --navy2:   #1A2A4A;
+    --navy3:   #1E3A5F;
+    --teal:    #0D7A8A;
+    --teal2:   #12A0B5;
+    --teal3:   #3ECAD8;
+    --gold:    #F0A500;
+    --gold2:   #FFD166;
+    --red:     #E74C3C;
+    --red2:    #FF6B6B;
+    --green:   #2ECC71;
+    --green2:  #55EFC4;
+    --white:   #F0F4F8;
+    --muted:   #6B7FA3;
+    --packet:  #3ECAD8;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--navy);
+    color: var(--white);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ───────────────────────────────────────── */
+  header {
+    background: linear-gradient(135deg, var(--navy2) 0%, var(--navy3) 100%);
+    border-bottom: 2px solid var(--teal);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .header-badge {
+    background: var(--teal);
+    color: var(--white);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  header h1 { font-size: 18px; font-weight: 800; color: var(--white); }
+  header h1 span { color: var(--teal3); }
+  .header-right { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); }
+
+  /* ── MAIN LAYOUT ──────────────────────────────────── */
+  .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+  /* ── MODE SELECTOR ────────────────────────────────── */
+  .mode-selector {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 32px;
+    background: var(--navy2);
+    border-radius: 12px;
+    padding: 8px;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    background: transparent;
+    color: var(--muted);
+  }
+  .mode-btn.active-no-vpn {
+    background: linear-gradient(135deg, #7B1A1A, var(--red));
+    color: var(--white);
+    box-shadow: 0 4px 20px rgba(231,76,60,0.4);
+  }
+  .mode-btn.active-vpn {
+    background: linear-gradient(135deg, var(--navy3), var(--teal));
+    color: var(--white);
+    box-shadow: 0 4px 20px rgba(13,122,138,0.5);
+  }
+  .mode-btn:hover:not(.active-no-vpn):not(.active-vpn) {
+    background: rgba(255,255,255,0.05);
+    color: var(--white);
+  }
+  .mode-icon { font-size: 18px; display: block; margin-bottom: 4px; }
+
+  /* ── SCENE ────────────────────────────────────────── */
+  .scene {
+    background: var(--navy2);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 24px;
+    border: 1px solid rgba(255,255,255,0.07);
+    position: relative;
+    overflow: hidden;
+    min-height: 240px;
+  }
+  .scene::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(13,122,138,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* Nodes */
+  .nodes-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 2;
+  }
+  .node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+  }
+  .node-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    border: 2px solid rgba(255,255,255,0.1);
+    background: var(--navy3);
+    transition: all 0.3s;
+  }
+  .node-icon.active { border-color: var(--teal2); box-shadow: 0 0 20px rgba(18,160,181,0.4); }
+  .node-icon.danger { border-color: var(--red); box-shadow: 0 0 20px rgba(231,76,60,0.4); }
+  .node-label { font-size: 11px; font-weight: 700; color: var(--muted); text-align: center; text-transform: uppercase; letter-spacing: 1px; }
+  .node-sublabel { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--teal2); text-align: center; }
+
+  /* Road / Track */
+  .track-container {
+    flex: 1;
+    position: relative;
+    height: 64px;
+    margin: 0 8px;
+    display: flex;
+    align-items: center;
+  }
+  .track {
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    position: relative;
+    overflow: visible;
+  }
+  .track-open { background: linear-gradient(90deg, rgba(231,76,60,0.3), rgba(231,76,60,0.7), rgba(231,76,60,0.3)); }
+  .track-vpn  { background: linear-gradient(90deg, rgba(13,122,138,0.3), rgba(18,160,181,0.8), rgba(13,122,138,0.3)); }
+  .track-dots {
+    position: absolute;
+    top: 50%; left: 0; right: 0;
+    transform: translateY(-50%);
+    height: 4px;
+    background-image: repeating-linear-gradient(90deg, transparent 0, transparent 8px, rgba(255,255,255,0.15) 8px, rgba(255,255,255,0.15) 12px);
+    border-radius: 2px;
+  }
+
+  /* Tunnel visual */
+  .tunnel-wrap {
+    position: relative;
+    height: 64px;
+    display: flex;
+    align-items: center;
+  }
+  .tunnel-bg {
+    position: absolute;
+    top: 50%;
+    left: 0; right: 0;
+    transform: translateY(-50%);
+    height: 32px;
+    background: linear-gradient(90deg, transparent, rgba(13,122,138,0.15), rgba(13,122,138,0.25), rgba(13,122,138,0.15), transparent);
+    border-radius: 16px;
+    border: 1px dashed rgba(62,202,216,0.3);
+  }
+  .tunnel-label {
+    position: absolute;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--teal3);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    background: var(--navy2);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(62,202,216,0.3);
+  }
+
+  /* Attacker node */
+  .attacker-section {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 12px;
+  }
+  .attacker-arm {
+    width: 2px;
+    height: 28px;
+    background: linear-gradient(to bottom, var(--red), transparent);
+    margin: 0 auto;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .attacker-arm.visible { opacity: 1; }
+  .attacker-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: all 0.4s ease;
+  }
+  .attacker-node.visible { opacity: 1; transform: translateY(0); }
+  .attacker-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: rgba(231,76,60,0.15);
+    border: 2px solid var(--red);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 0 16px rgba(231,76,60,0.3);
+  }
+
+  /* ── PACKET ANIMATION ─────────────────────────────── */
+  .packet {
+    position: absolute;
+    width: 36px;
+    height: 24px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    transition: none;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .packet-open {
+    background: var(--red);
+    color: var(--white);
+    box-shadow: 0 0 12px rgba(231,76,60,0.6);
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  .packet-encrypted {
+    background: var(--teal);
+    color: var(--white);
+    box-shadow: 0 0 14px rgba(62,202,216,0.5);
+    border: 1px solid rgba(62,202,216,0.5);
+  }
+  .packet-encap {
+    background: var(--navy3);
+    color: var(--teal3);
+    box-shadow: 0 0 14px rgba(62,202,216,0.3);
+    border: 2px solid var(--teal2);
+    font-size: 9px;
+    width: 48px;
+    padding: 0 4px;
+    text-align: center;
+  }
+  @keyframes packetMove {
+    0%   { left: 0%; opacity: 0; transform: translateY(-50%) scale(0.8); }
+    5%   { opacity: 1; transform: translateY(-50%) scale(1); }
+    95%  { opacity: 1; transform: translateY(-50%) scale(1); }
+    100% { left: calc(100% - 36px); opacity: 0; transform: translateY(-50%) scale(0.8); }
+  }
+  .packet.animating {
+    animation: packetMove 2.8s ease-in-out forwards;
+  }
+  @keyframes sniffPulse {
+    0%   { opacity: 0; transform: translate(-50%, 0) scale(0.8); }
+    20%  { opacity: 1; transform: translate(-50%, 0) scale(1.1); }
+    80%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -8px); }
+  }
+  .sniff-bubble {
+    position: absolute;
+    background: rgba(231,76,60,0.95);
+    color: white;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 6px 12px;
+    border-radius: 8px;
+    white-space: nowrap;
+    font-weight: 600;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    z-index: 20;
+    border: 1px solid rgba(255,255,255,0.2);
+    display: none;
+  }
+  .sniff-bubble.show {
+    display: block;
+    animation: sniffPulse 2.5s ease forwards;
+  }
+  @keyframes blockedPulse {
+    0%   { opacity: 0; transform: translate(-50%, 0) scale(0.8); }
+    20%  { opacity: 1; transform: translate(-50%, 0) scale(1.1); }
+    80%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -8px); }
+  }
+  .blocked-bubble {
+    position: absolute;
+    background: rgba(13,122,138,0.95);
+    color: white;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 6px 12px;
+    border-radius: 8px;
+    white-space: nowrap;
+    font-weight: 600;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    z-index: 20;
+    border: 1px solid rgba(62,202,216,0.4);
+    display: none;
+  }
+  .blocked-bubble.show {
+    display: block;
+    animation: blockedPulse 2.5s ease forwards;
+  }
+
+  /* ── CONTROLS ─────────────────────────────────────── */
+  .controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  .btn-send {
+    padding: 12px 28px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-send-novpn {
+    background: linear-gradient(135deg, var(--red), #C0392B);
+    color: white;
+  }
+  .btn-send-novpn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(231,76,60,0.4); }
+  .btn-send-vpn {
+    background: linear-gradient(135deg, var(--teal), var(--navy3));
+    color: white;
+  }
+  .btn-send-vpn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(13,122,138,0.5); }
+  .btn-send:active { transform: translateY(0); }
+  .btn-send:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .step-display {
+    flex: 1;
+    background: var(--navy2);
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--teal3);
+    border: 1px solid rgba(62,202,216,0.2);
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+  }
+  .step-display.danger { color: var(--red2); border-color: rgba(231,76,60,0.3); }
+
+  /* ── INFO CARDS ───────────────────────────────────── */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .info-card {
+    background: var(--navy2);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .info-card-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .info-card-title.red { color: var(--red2); }
+  .info-card-title.teal { color: var(--teal3); }
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 13px;
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-row label { color: var(--muted); font-size: 12px; }
+  .info-row .val { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; }
+  .val-red { color: var(--red2); }
+  .val-green { color: var(--green2); }
+  .val-teal { color: var(--teal3); }
+  .val-gold { color: var(--gold2); }
+
+  /* ── PACKET ANATOMY ──────────────────────────────── */
+  .packet-anatomy {
+    background: var(--navy2);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .anatomy-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .packet-layers {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .layer {
+    border-radius: 8px;
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    transition: all 0.4s ease;
+    opacity: 0.3;
+  }
+  .layer.active { opacity: 1; }
+  .layer-outer { background: rgba(13,122,138,0.2); border: 1px solid rgba(62,202,216,0.3); }
+  .layer-tunnel { background: rgba(62,202,216,0.12); border: 1px solid rgba(62,202,216,0.2); }
+  .layer-encrypted { background: rgba(240,165,0,0.12); border: 1px solid rgba(240,165,0,0.3); }
+  .layer-original { background: rgba(231,76,60,0.1); border: 1px solid rgba(231,76,60,0.2); }
+  .layer-visible  { background: rgba(231,76,60,0.2); border: 1px solid rgba(231,76,60,0.5); }
+  .layer-name { font-weight: 700; font-size: 12px; }
+  .layer-desc { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); }
+  .layer-status { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; }
+  .status-protected { background: rgba(46,204,113,0.2); color: var(--green2); }
+  .status-exposed   { background: rgba(231,76,60,0.2); color: var(--red2); }
+  .status-hidden    { background: rgba(13,122,138,0.3); color: var(--teal3); }
+
+  /* ── LOG SECTION ──────────────────────────────────── */
+  .log-section {
+    background: var(--navy2);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .log-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .log-clear {
+    font-size: 10px;
+    color: var(--muted);
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    font-weight: 400;
+    letter-spacing: normal;
+  }
+  .log-clear:hover { color: var(--white); }
+  .log-entries {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    max-height: 180px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--navy3) transparent;
+  }
+  .log-entry {
+    padding: 6px 10px;
+    border-radius: 6px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+  .log-entry.danger { background: rgba(231,76,60,0.1); color: var(--red2); }
+  .log-entry.success { background: rgba(13,122,138,0.12); color: var(--teal3); }
+  .log-entry.info { background: rgba(255,255,255,0.04); color: var(--muted); }
+  .log-entry.warning { background: rgba(240,165,0,0.1); color: var(--gold2); }
+  .log-time { opacity: 0.5; white-space: nowrap; flex: 0 0 auto; }
+  .log-msg { word-break: break-all; }
+
+  /* ── STEP INDICATOR ──────────────────────────────── */
+  .step-indicator {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .step-chip {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--muted);
+    background: transparent;
+    transition: all 0.3s;
+    white-space: nowrap;
+  }
+  .step-chip.active-red {
+    background: rgba(231,76,60,0.2);
+    border-color: var(--red);
+    color: var(--red2);
+  }
+  .step-chip.active-teal {
+    background: rgba(13,122,138,0.2);
+    border-color: var(--teal2);
+    color: var(--teal3);
+  }
+  .step-chip.done {
+    background: rgba(46,204,113,0.1);
+    border-color: var(--green);
+    color: var(--green2);
+  }
+
+  /* ── FOOTER ──────────────────────────────────────── */
+  footer {
+    text-align: center;
+    padding: 20px;
+    font-size: 11px;
+    color: var(--muted);
+    border-top: 1px solid rgba(255,255,255,0.05);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  footer span { color: var(--teal2); }
+
+  /* ── RESPONSIVE ──────────────────────────────────── */
+  @media (max-width: 640px) {
+    .info-grid { grid-template-columns: 1fr; }
+    .controls { flex-direction: column; align-items: stretch; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="header-badge">Demo Lab</div>
+    <h1>Packet Journey <span>Visualizer</span></h1>
+  </div>
+  <div class="header-right">Siskamjar · Minggu 5 — VPN</div>
+</header>
+
+<div class="container">
+
+  <!-- Mode Selector -->
+  <div class="mode-selector">
+    <button class="mode-btn active-no-vpn" id="btnNoVPN" onclick="setMode('novpn')">
+      <span class="mode-icon">🔓</span>
+      Tanpa VPN
+      <div style="font-size:10px;font-weight:400;margin-top:2px;opacity:0.8">Data terekspos</div>
+    </button>
+    <button class="mode-btn" id="btnVPN" onclick="setMode('vpn')">
+      <span class="mode-icon">🔒</span>
+      Dengan VPN
+      <div style="font-size:10px;font-weight:400;margin-top:2px;opacity:0.8">Data terenkripsi</div>
+    </button>
+  </div>
+
+  <!-- Step Indicator -->
+  <div class="step-indicator" id="stepIndicator">
+    <div class="step-chip" id="chip0">① Kirim Paket</div>
+    <div class="step-chip" id="chip1">② Enkripsi</div>
+    <div class="step-chip" id="chip2">③ Enkapsulasi</div>
+    <div class="step-chip" id="chip3">④ Tunnel</div>
+    <div class="step-chip" id="chip4">⑤ Dekripsi</div>
+    <div class="step-chip" id="chip5">⑥ Tiba</div>
+  </div>
+
+  <!-- Scene -->
+  <div class="scene" id="mainScene">
+
+    <!-- No-VPN scene -->
+    <div id="sceneNoVPN">
+      <div class="nodes-row">
+        <!-- User -->
+        <div class="node">
+          <div class="node-icon" id="iconUser">💻</div>
+          <div class="node-label">Laptop Kamu</div>
+          <div class="node-sublabel">192.168.1.5</div>
+        </div>
+
+        <!-- Track 1: User → Internet -->
+        <div class="track-container" id="track1">
+          <div class="track track-open">
+            <div class="track-dots"></div>
+          </div>
+          <!-- Attacker -->
+          <div class="attacker-section" id="attacker1" style="position:absolute;top:0;left:50%;transform:translateX(-50%)">
+            <div class="attacker-arm" id="arm1"></div>
+            <div class="attacker-node" id="attackerNode1">
+              <div class="attacker-icon">🦹</div>
+              <div style="font-size:9px;color:var(--red2);font-weight:700;text-align:center;">HACKER<br>Bisa baca!</div>
+              <div class="sniff-bubble" id="sniff1">📡 SNIFFED: "password=admin123"</div>
+            </div>
+          </div>
+          <div class="packet packet-open" id="pkt1" style="display:none;">DATA</div>
+        </div>
+
+        <!-- Internet -->
+        <div class="node">
+          <div class="node-icon" id="iconInternet">🌐</div>
+          <div class="node-label">Internet</div>
+          <div class="node-sublabel">Publik</div>
+        </div>
+
+        <!-- Track 2: Internet → Server -->
+        <div class="track-container" id="track2">
+          <div class="track track-open">
+            <div class="track-dots"></div>
+          </div>
+          <div class="packet packet-open" id="pkt2" style="display:none;">DATA</div>
+        </div>
+
+        <!-- Server -->
+        <div class="node">
+          <div class="node-icon" id="iconServer">🖥️</div>
+          <div class="node-label">Server Kampus</div>
+          <div class="node-sublabel">10.0.0.1</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VPN scene -->
+    <div id="sceneVPN" style="display:none;">
+      <div class="nodes-row">
+        <!-- User -->
+        <div class="node">
+          <div class="node-icon" id="iconUserVPN">💻</div>
+          <div class="node-label">Laptop Kamu</div>
+          <div class="node-sublabel">10.8.0.5 (virtual)</div>
+        </div>
+
+        <!-- Encrypt segment -->
+        <div class="track-container" id="trackEnc">
+          <div class="track track-vpn"></div>
+          <div class="packet packet-encrypted" id="pktEnc" style="display:none;">ENC</div>
+        </div>
+
+        <!-- VPN Client -->
+        <div class="node">
+          <div class="node-icon" id="iconVPNClient">🔐</div>
+          <div class="node-label">VPN Client</div>
+          <div class="node-sublabel">Enkripsi + Enkapsulasi</div>
+        </div>
+
+        <!-- Tunnel segment -->
+        <div class="track-container" id="trackTunnel" style="flex:2;">
+          <div class="tunnel-wrap" style="width:100%;">
+            <div class="tunnel-bg"></div>
+            <div class="tunnel-label">🔒 AES-256 Encrypted Tunnel</div>
+            <div class="track" style="width:100%;background:linear-gradient(90deg,transparent,rgba(62,202,216,0.4),transparent);">
+            </div>
+          </div>
+          <!-- Attacker on tunnel -->
+          <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);">
+            <div class="attacker-arm" id="armVPN"></div>
+            <div class="attacker-node" id="attackerVPN">
+              <div class="attacker-icon">🦹</div>
+              <div style="font-size:9px;color:var(--muted);font-weight:700;text-align:center;">HACKER<br>Gagal!</div>
+              <div class="blocked-bubble" id="blocked1">🔒 ENCRYPTED: ▓▓▒▒░░▓▓▒▒</div>
+            </div>
+          </div>
+          <div class="packet packet-encap" id="pktTunnel" style="display:none;">UDP+ENC</div>
+        </div>
+
+        <!-- VPN Server -->
+        <div class="node">
+          <div class="node-icon" id="iconVPNServer">🛡️</div>
+          <div class="node-label">VPN Server</div>
+          <div class="node-sublabel">Dekripsi</div>
+        </div>
+
+        <!-- Final segment -->
+        <div class="track-container" id="trackFinal">
+          <div class="track track-vpn"></div>
+          <div class="packet packet-encrypted" id="pktFinal" style="display:none;">DATA</div>
+        </div>
+
+        <!-- Server -->
+        <div class="node">
+          <div class="node-icon" id="iconServerVPN">🖥️</div>
+          <div class="node-label">Server Kampus</div>
+          <div class="node-sublabel">10.0.0.1</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="btn-send btn-send-novpn" id="btnSend" onclick="sendPacket()">
+      <span>▶</span> <span id="btnText">Kirim Paket</span>
+    </button>
+    <div class="step-display" id="stepDisplay">
+      Tekan "Kirim Paket" untuk memulai simulasi...
+    </div>
+  </div>
+
+  <!-- Info Grid -->
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="info-card-title" id="cardTitle1">
+        <span>🔴</span> <span id="cardTitleText">Tanpa VPN — Bahaya</span>
+      </div>
+      <div class="info-row">
+        <label>Status data</label>
+        <span class="val val-red" id="infoDataStatus">PLAINTEXT</span>
+      </div>
+      <div class="info-row">
+        <label>Bisa disadap?</label>
+        <span class="val val-red" id="infoSniffable">YA ⚠️</span>
+      </div>
+      <div class="info-row">
+        <label>IP sumber terlihat?</label>
+        <span class="val val-red" id="infoIPVisible">YA — 192.168.1.5</span>
+      </div>
+      <div class="info-row">
+        <label>Enkripsi</label>
+        <span class="val val-red" id="infoEncryption">TIDAK ADA</span>
+      </div>
+    </div>
+    <div class="info-card">
+      <div class="info-card-title" id="cardTitle2">
+        <span id="card2icon">📊</span> <span id="cardTitle2Text">Statistik Paket</span>
+      </div>
+      <div class="info-row">
+        <label>Paket dikirim</label>
+        <span class="val val-teal" id="statSent">0</span>
+      </div>
+      <div class="info-row">
+        <label>Paket tiba</label>
+        <span class="val val-green" id="statArrived">0</span>
+      </div>
+      <div class="info-row">
+        <label id="statLabel3">Paket dicegat</label>
+        <span class="val val-red" id="statIntercepted">0</span>
+      </div>
+      <div class="info-row">
+        <label>Mode aktif</label>
+        <span class="val val-gold" id="statMode">Tanpa VPN</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Packet Anatomy -->
+  <div class="packet-anatomy">
+    <div class="anatomy-title">🔬 Anatomi Paket — <span id="anatomyMode">Mode: Tanpa VPN</span></div>
+    <div class="packet-layers" id="layersNoVPN">
+      <div class="layer layer-visible" id="layerHeader">
+        <div>
+          <div class="layer-name">IP Header</div>
+          <div class="layer-desc">src: 192.168.1.5 → dst: 10.0.0.1 | port: 80</div>
+        </div>
+        <span class="layer-status status-exposed">TEREKSPOS</span>
+      </div>
+      <div class="layer layer-visible" id="layerPayload">
+        <div>
+          <div class="layer-name">Payload (Data Asli)</div>
+          <div class="layer-desc">GET /login HTTP/1.1 | user=aris&pass=admin123</div>
+        </div>
+        <span class="layer-status status-exposed">BISA DIBACA</span>
+      </div>
+    </div>
+    <div class="packet-layers" id="layersVPN" style="display:none;">
+      <div class="layer layer-outer">
+        <div>
+          <div class="layer-name" style="color:var(--teal3)">Outer UDP Header</div>
+          <div class="layer-desc">src: 10.8.0.5 → dst: 203.0.113.1 | port: 1194</div>
+        </div>
+        <span class="layer-status status-protected">TERLIHAT</span>
+      </div>
+      <div class="layer layer-tunnel">
+        <div>
+          <div class="layer-name" style="color:var(--teal2)">OpenVPN Envelope</div>
+          <div class="layer-desc">HMAC-SHA256 auth tag | TLS session ID</div>
+        </div>
+        <span class="layer-status status-hidden">DIVALIDASI</span>
+      </div>
+      <div class="layer layer-encrypted">
+        <div>
+          <div class="layer-name" style="color:var(--gold2)">AES-256-GCM Ciphertext</div>
+          <div class="layer-desc">▓▓▒▒░░▓▓▒▒░░▓▓ (IP Header + Payload terenkripsi)</div>
+        </div>
+        <span class="layer-status status-protected">TERENKRIPSI</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="log-section">
+    <div class="log-title">
+      <span>📋 Event Log</span>
+      <span class="log-clear" onclick="clearLog()">Bersihkan</span>
+    </div>
+    <div class="log-entries" id="logEntries">
+      <div class="log-entry info">
+        <span class="log-time">00:00</span>
+        <span class="log-msg">Sistem siap. Pilih mode dan kirim paket untuk memulai.</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <span>Siskamjar · STTI NIIT Jakarta</span> · Demo Packet Journey Visualizer · Minggu 5 — VPN
+</footer>
+
+<script>
+// ── State ──────────────────────────────────────────────
+let currentMode = 'novpn';
+let isAnimating = false;
+let stats = { sent: 0, arrived: 0, intercepted: 0, blocked: 0 };
+let logTime = 0;
+
+// ── Mode Switch ────────────────────────────────────────
+function setMode(mode) {
+  if (isAnimating) return;
+  currentMode = mode;
+
+  // Buttons
+  document.getElementById('btnNoVPN').className = 'mode-btn' + (mode==='novpn' ? ' active-no-vpn' : '');
+  document.getElementById('btnVPN').className   = 'mode-btn' + (mode==='vpn'   ? ' active-vpn' : '');
+
+  // Scenes
+  document.getElementById('sceneNoVPN').style.display = mode === 'novpn' ? '' : 'none';
+  document.getElementById('sceneVPN').style.display   = mode === 'vpn'   ? '' : 'none';
+
+  // Send button style
+  const btn = document.getElementById('btnSend');
+  btn.className = 'btn-send btn-send-' + (mode === 'novpn' ? 'novpn' : 'vpn');
+  document.getElementById('btnText').textContent = 'Kirim Paket';
+
+  // Info card 1
+  const t1 = document.getElementById('cardTitleText');
+  const t1icon = document.querySelector('#cardTitle1 span:first-child');
+  if (mode === 'novpn') {
+    t1.textContent = 'Tanpa VPN — Bahaya';
+    t1icon.textContent = '🔴';
+    document.getElementById('infoDataStatus').textContent  = 'PLAINTEXT';
+    document.getElementById('infoDataStatus').className    = 'val val-red';
+    document.getElementById('infoSniffable').textContent   = 'YA ⚠️';
+    document.getElementById('infoSniffable').className     = 'val val-red';
+    document.getElementById('infoIPVisible').textContent   = 'YA — 192.168.1.5';
+    document.getElementById('infoIPVisible').className     = 'val val-red';
+    document.getElementById('infoEncryption').textContent  = 'TIDAK ADA';
+    document.getElementById('infoEncryption').className    = 'val val-red';
+    document.getElementById('statMode').textContent        = 'Tanpa VPN';
+    document.getElementById('statLabel3').textContent      = 'Paket dicegat';
+    document.getElementById('statIntercepted').className   = 'val val-red';
+  } else {
+    t1.textContent = 'Dengan VPN — Aman';
+    t1icon.textContent = '🟢';
+    document.getElementById('infoDataStatus').textContent  = 'AES-256-GCM';
+    document.getElementById('infoDataStatus').className    = 'val val-green';
+    document.getElementById('infoSniffable').textContent   = 'TIDAK ✓';
+    document.getElementById('infoSniffable').className     = 'val val-green';
+    document.getElementById('infoIPVisible').textContent   = 'TERSEMBUNYI ✓';
+    document.getElementById('infoIPVisible').className     = 'val val-green';
+    document.getElementById('infoEncryption').textContent  = 'AES-256 + HMAC';
+    document.getElementById('infoEncryption').className    = 'val val-green';
+    document.getElementById('statMode').textContent        = 'Dengan VPN';
+    document.getElementById('statLabel3').textContent      = 'Serangan diblokir';
+    document.getElementById('statIntercepted').className   = 'val val-teal';
+  }
+
+  // Anatomy
+  document.getElementById('layersNoVPN').style.display = mode === 'novpn' ? '' : 'none';
+  document.getElementById('layersVPN').style.display   = mode === 'vpn'   ? '' : 'none';
+  document.getElementById('anatomyMode').textContent   = mode === 'novpn' ? 'Mode: Tanpa VPN' : 'Mode: Dengan VPN';
+
+  // Activate layers
+  const noVPNLayers = document.querySelectorAll('#layersNoVPN .layer');
+  const vpnLayers   = document.querySelectorAll('#layersVPN .layer');
+  noVPNLayers.forEach(l => l.classList.add('active'));
+  vpnLayers.forEach(l => l.classList.add('active'));
+
+  // Step chips
+  resetChips();
+  document.getElementById('stepDisplay').textContent = 'Mode diubah ke: ' + (mode==='novpn' ? 'Tanpa VPN' : 'Dengan VPN') + ' — siap kirim paket.';
+  document.getElementById('stepDisplay').className = 'step-display' + (mode==='vpn' ? '' : '');
+
+  addLog(mode==='novpn' ? 'Mode: TANPA VPN diaktifkan. Data tidak terlindungi.' : 'Mode: VPN diaktifkan. Enkripsi AES-256-GCM siap.', mode==='novpn'?'danger':'success');
+}
+
+// ── Chips ──────────────────────────────────────────────
+function resetChips() {
+  for (let i=0; i<6; i++) document.getElementById('chip'+i).className = 'step-chip';
+}
+function activateChip(i) {
+  const color = currentMode === 'novpn' ? 'active-red' : 'active-teal';
+  document.getElementById('chip'+i).className = 'step-chip ' + color;
+}
+function doneChip(i) {
+  document.getElementById('chip'+i).className = 'step-chip done';
+}
+
+// ── Log ────────────────────────────────────────────────
+function addLog(msg, type='info') {
+  const entries = document.getElementById('logEntries');
+  const mm = String(Math.floor(logTime/60)).padStart(2,'0');
+  const ss = String(logTime % 60).padStart(2,'0');
+  logTime++;
+  const div = document.createElement('div');
+  div.className = 'log-entry ' + type;
+  div.innerHTML = `<span class="log-time">${mm}:${ss}</span><span class="log-msg">${msg}</span>`;
+  entries.prepend(div);
+}
+
+function clearLog() {
+  document.getElementById('logEntries').innerHTML = '';
+  addLog('Log dibersihkan.', 'info');
+}
+
+// ── Animate Packet (No VPN) ────────────────────────────
+async function sendPacketNoVPN() {
+  const display = document.getElementById('stepDisplay');
+  const pkt1 = document.getElementById('pkt1');
+  const pkt2 = document.getElementById('pkt2');
+  const attacker1 = document.getElementById('attackerNode1');
+  const arm1 = document.getElementById('arm1');
+  const sniff1 = document.getElementById('sniff1');
+
+  stats.sent++;
+  updateStats();
+
+  // Step 1: Kirim
+  activateChip(0);
+  display.textContent = '① Paket dikirim dari laptop ke internet... (PLAINTEXT)';
+  display.className = 'step-display danger';
+  addLog('Paket dikirim: GET /login | user=aris&pass=admin123 | src: 192.168.1.5', 'danger');
+  document.getElementById('iconUser').classList.add('active');
+
+  // Animate pkt1
+  pkt1.style.display = 'flex';
+  pkt1.style.left = '0%';
+  pkt1.classList.add('animating');
+  await sleep(700);
+  doneChip(0);
+  activateChip(1);
+  document.getElementById('iconInternet').classList.add('active');
+  display.textContent = '② Melewati jaringan terbuka — bisa disadap siapa saja!';
+  addLog('⚠ Data bergerak tanpa enkripsi melalui jaringan publik', 'warning');
+
+  // Show attacker
+  await sleep(800);
+  arm1.classList.add('visible');
+  attacker1.classList.add('visible');
+  await sleep(400);
+  sniff1.classList.add('show');
+  display.textContent = '⚠️ DICEGAT! Hacker berhasil membaca isi paket!';
+  addLog('🚨 SERANGAN BERHASIL: Hacker mencegat paket | user=aris | pass=admin123', 'danger');
+  stats.intercepted++;
+  updateStats();
+  doneChip(1); doneChip(2); doneChip(3);
+
+  await sleep(2600);
+  // Reset attacker
+  sniff1.classList.remove('show');
+  attacker1.classList.remove('visible');
+  arm1.classList.remove('visible');
+  pkt1.classList.remove('animating');
+  pkt1.style.display = 'none';
+
+  // pkt2 — data arrives anyway
+  activateChip(4);
+  pkt2.style.display = 'flex';
+  pkt2.classList.add('animating');
+  display.textContent = '⑤ Paket tetap tiba di server — tapi sudah terlambat!';
+  addLog('Paket tiba di server. Tapi data sudah dicuri!', 'danger');
+  await sleep(2800);
+  pkt2.classList.remove('animating');
+  pkt2.style.display = 'none';
+
+  activateChip(5);
+  doneChip(4); doneChip(5);
+  document.getElementById('iconServer').classList.add('active');
+  display.textContent = '⚠️ Selesai — Paket tiba tapi data SUDAH BOCOR. Gunakan VPN!';
+  addLog('Simulasi selesai. Kesimpulan: DATA BOCOR tanpa VPN!', 'danger');
+  stats.arrived++;
+  updateStats();
+
+  await sleep(1500);
+  document.getElementById('iconUser').classList.remove('active');
+  document.getElementById('iconInternet').classList.remove('active');
+  document.getElementById('iconServer').classList.remove('active');
+}
+
+// ── Animate Packet (VPN) ──────────────────────────────
+async function sendPacketVPN() {
+  const display = document.getElementById('stepDisplay');
+  display.className = 'step-display';
+
+  stats.sent++;
+  updateStats();
+
+  const pktEnc    = document.getElementById('pktEnc');
+  const pktTunnel = document.getElementById('pktTunnel');
+  const pktFinal  = document.getElementById('pktFinal');
+  const armVPN    = document.getElementById('armVPN');
+  const attackerVPN = document.getElementById('attackerVPN');
+  const blocked1  = document.getElementById('blocked1');
+
+  // Step 1
+  activateChip(0);
+  display.textContent = '① Paket disiapkan di laptop...';
+  addLog('Paket disiapkan: GET /login | user=aris&pass=admin123', 'info');
+  document.getElementById('iconUserVPN').classList.add('active');
+  await sleep(600);
+  doneChip(0);
+
+  // Step 2: Enkripsi
+  activateChip(1);
+  display.textContent = '② Enkripsi AES-256-GCM dijalankan oleh VPN Client...';
+  addLog('🔐 VPN Client: mengenkripsi payload dengan AES-256-GCM', 'success');
+  document.getElementById('iconVPNClient').classList.add('active');
+  pktEnc.style.display = 'flex';
+  pktEnc.classList.add('animating');
+  await sleep(1400);
+  pktEnc.classList.remove('animating');
+  pktEnc.style.display = 'none';
+  doneChip(1);
+
+  // Step 3: Enkapsulasi
+  activateChip(2);
+  display.textContent = '③ Enkapsulasi: paket dibungkus dalam UDP header baru...';
+  addLog('📦 Enkapsulasi: IP Header + Payload terenkripsi → dibungkus UDP packet baru', 'success');
+  await sleep(700);
+  doneChip(2);
+
+  // Step 4: Tunnel
+  activateChip(3);
+  display.textContent = '④ Melewati tunnel terenkripsi AES-256...';
+  addLog('🔒 Tunnel aktif: paket bergerak melalui AES-256 encrypted tunnel', 'success');
+  pktTunnel.style.display = 'flex';
+  pktTunnel.classList.add('animating');
+  await sleep(800);
+
+  // Show attacker, fail
+  armVPN.classList.add('visible');
+  attackerVPN.classList.add('visible');
+  await sleep(400);
+  blocked1.classList.add('show');
+  display.textContent = '🔒 Hacker mencoba membaca — GAGAL! Data terenkripsi.';
+  addLog('🦹 Percobaan serangan DIBLOKIR: data terenkripsi, tidak bisa dibaca', 'success');
+  stats.blocked++;
+  updateStats();
+
+  await sleep(2200);
+  blocked1.classList.remove('show');
+  attackerVPN.classList.remove('visible');
+  armVPN.classList.remove('visible');
+  pktTunnel.classList.remove('animating');
+  pktTunnel.style.display = 'none';
+  doneChip(3);
+
+  // Step 5: Dekripsi
+  activateChip(4);
+  document.getElementById('iconVPNServer').classList.add('active');
+  display.textContent = '⑤ VPN Server mendekripsi paket...';
+  addLog('🛡️ VPN Server: mendekripsi paket, memvalidasi HMAC', 'success');
+  pktFinal.style.display = 'flex';
+  pktFinal.classList.add('animating');
+  await sleep(1400);
+  pktFinal.classList.remove('animating');
+  pktFinal.style.display = 'none';
+  doneChip(4);
+
+  // Step 6: Tiba
+  activateChip(5);
+  document.getElementById('iconServerVPN').classList.add('active');
+  display.textContent = '⑥ Paket tiba di server kampus — AMAN & utuh!';
+  addLog('✅ Paket tiba aman di Server Kampus. Data terlindungi sepanjang perjalanan!', 'success');
+  stats.arrived++;
+  updateStats();
+  doneChip(5);
+
+  await sleep(1500);
+  document.getElementById('iconUserVPN').classList.remove('active');
+  document.getElementById('iconVPNClient').classList.remove('active');
+  document.getElementById('iconVPNServer').classList.remove('active');
+  document.getElementById('iconServerVPN').classList.remove('active');
+}
+
+// ── Send Packet ────────────────────────────────────────
+async function sendPacket() {
+  if (isAnimating) return;
+  isAnimating = true;
+  resetChips();
+
+  const btn = document.getElementById('btnSend');
+  btn.disabled = true;
+  document.getElementById('btnText').textContent = 'Mengirim...';
+
+  try {
+    if (currentMode === 'novpn') {
+      await sendPacketNoVPN();
+    } else {
+      await sendPacketVPN();
+    }
+  } finally {
+    isAnimating = false;
+    btn.disabled = false;
+    document.getElementById('btnText').textContent = 'Kirim Lagi';
+  }
+}
+
+// ── Stats ──────────────────────────────────────────────
+function updateStats() {
+  document.getElementById('statSent').textContent        = stats.sent;
+  document.getElementById('statArrived').textContent     = stats.arrived;
+  if (currentMode === 'novpn') {
+    document.getElementById('statIntercepted').textContent = stats.intercepted;
+  } else {
+    document.getElementById('statIntercepted').textContent = stats.blocked;
+  }
+}
+
+// ── Helpers ────────────────────────────────────────────
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── Init ───────────────────────────────────────────────
+setMode('novpn');
+// Activate anatomy layers on load
+document.querySelectorAll('.layer').forEach(l => l.classList.add('active'));
+</script>
+
+</body>
+</html>
