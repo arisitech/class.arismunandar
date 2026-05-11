@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo Malicious Software — Siskamjar Minggu 6</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --navy:    #1A2A4A;
+    --navymid: #1E3A5F;
+    --teal:    #0D7A8A;
+    --teal2:   #12A0B5;
+    --gold:    #F0A500;
+    --red:     #C0392B;
+    --green:   #1A7A4A;
+    --bg:      #0E1624;
+    --panel:   #162033;
+    --border:  #243352;
+    --text:    #CBD5E8;
+    --dim:     #4A5A7A;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--navy);
+    border-bottom: 2px solid var(--teal);
+    padding: 14px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo-area { display:flex; align-items:center; gap:14px; }
+  .logo-badge {
+    background: var(--teal);
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    letter-spacing: 2px;
+  }
+  .header-title { font-size:15px; font-weight:700; color:#fff; }
+  .header-sub   { font-size:11px; color: var(--teal2); font-family:'JetBrains Mono',monospace; }
+  .badge-week {
+    background: var(--gold);
+    color: var(--navy);
+    font-size: 11px; font-weight:800;
+    padding: 4px 12px;
+    letter-spacing: 1px;
+  }
+
+  /* ── LAYOUT ── */
+  .main { display:grid; grid-template-columns:240px 1fr 300px; gap:0; height:calc(100vh - 58px); }
+
+  /* ── CANVAS AREA ── */
+  .canvas-area {
+    position:relative;
+    background: radial-gradient(ellipse at 30% 40%, #162540 0%, #0E1624 70%);
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+  }
+  #netCanvas { width:100%; height:100%; display:block; }
+
+  /* ── LEGEND ── */
+  .legend {
+    position: absolute;
+    bottom: 20px; left: 20px;
+    background: rgba(22,32,51,0.92);
+    border: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex; gap: 18px;
+  }
+  .legend-item { display:flex; align-items:center; gap:7px; font-size:12px; font-family:'JetBrains Mono',monospace; }
+  .legend-dot { width:12px; height:12px; border-radius:50%; }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    background: var(--panel);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── TABS ── */
+  .tabs { display:flex; border-bottom: 1px solid var(--border); }
+  .tab {
+    flex:1; padding:12px 8px;
+    text-align:center; font-size:12px; font-weight:700;
+    cursor:pointer; color: var(--dim);
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    letter-spacing:0.5px;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color:#fff; border-bottom-color: var(--gold); background: rgba(240,165,0,0.06); }
+  .tab[data-mode="virus"].active  { border-bottom-color: var(--teal2); background: rgba(18,160,181,0.08); }
+  .tab[data-mode="worm"].active   { border-bottom-color: var(--red);   background: rgba(192,57,43,0.08);  }
+  .tab[data-mode="trojan"].active { border-bottom-color: var(--gold);  background: rgba(240,165,0,0.08);  }
+
+  /* ── INFO PANEL ── */
+  .info-panel { padding:18px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .mode-badge {
+    display:inline-block;
+    font-size:10px; font-weight:800;
+    padding:3px 10px; letter-spacing:2px;
+    margin-bottom:10px;
+  }
+  .mode-virus   .mode-badge { background: rgba(18,160,181,0.2); color:var(--teal2); border:1px solid var(--teal); }
+  .mode-worm    .mode-badge { background: rgba(192,57,43,0.2);  color:#E57373;      border:1px solid var(--red);  }
+  .mode-trojan  .mode-badge { background: rgba(240,165,0,0.2);  color:var(--gold);  border:1px solid var(--gold); }
+
+  .info-title { font-size:18px; font-weight:800; color:#fff; margin-bottom:6px; }
+  .info-desc  { font-size:12px; color: var(--text); line-height:1.7; font-family:'JetBrains Mono',monospace; }
+
+  .key-fact {
+    margin-top:12px;
+    padding:10px 12px;
+    border-left: 3px solid var(--teal);
+    background: rgba(13,122,138,0.1);
+    font-size:11px; font-family:'JetBrains Mono',monospace;
+    color: var(--teal2); line-height:1.6;
+  }
+  .mode-worm   .key-fact { border-left-color:var(--red); background:rgba(192,57,43,0.1); color:#E57373; }
+  .mode-trojan .key-fact { border-left-color:var(--gold); background:rgba(240,165,0,0.1); color:var(--gold); }
+
+  /* ── CONTROLS ── */
+  .controls { padding:16px 18px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .controls-label { font-size:10px; font-weight:700; color:var(--dim); letter-spacing:2px; margin-bottom:10px; }
+
+  .btn-row { display:flex; gap:8px; margin-bottom:10px; }
+  .btn {
+    flex:1; padding:10px 8px;
+    font-family:'Syne',sans-serif; font-size:12px; font-weight:700;
+    cursor:pointer; border:none; letter-spacing:0.5px;
+    transition: all 0.15s;
+  }
+  .btn-primary {
+    background: var(--teal);
+    color:#fff;
+  }
+  .btn-primary:hover { background: var(--teal2); }
+  .btn-primary:disabled { background: var(--border); color:var(--dim); cursor:not-allowed; }
+  .btn-secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color:var(--text); }
+  .btn-danger { background: var(--red); color:#fff; }
+  .btn-danger:hover { background: #E74C3C; }
+
+  .btn-infect {
+    width:100%; padding:12px;
+    font-family:'Syne',sans-serif; font-size:13px; font-weight:800;
+    cursor:pointer; border:none; letter-spacing:1px;
+    transition: all 0.15s;
+    display:none;
+  }
+  .mode-virus   .btn-infect { background:var(--teal2); color:#fff; }
+  .mode-worm    .btn-infect { background:var(--red); color:#fff; }
+  .mode-trojan  .btn-infect { background:var(--gold); color:var(--navy); }
+  .btn-infect.visible { display:block; }
+  .btn-infect:hover { filter:brightness(1.1); }
+  .btn-infect:disabled { opacity:0.4; cursor:not-allowed; }
+
+  /* speed control */
+  .speed-row { display:flex; align-items:center; gap:10px; margin-top:8px; }
+  .speed-row label { font-size:11px; color:var(--dim); font-family:'JetBrains Mono',monospace; width:48px; }
+  input[type=range] {
+    flex:1; height:4px;
+    accent-color: var(--teal);
+  }
+  .speed-val { font-size:11px; color:var(--teal2); font-family:'JetBrains Mono',monospace; width:28px; text-align:right; }
+
+  /* ── LOG PANEL (kiri) ── */
+  .log-panel {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    order: -1;
+  }
+  .log-panel-header {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .log-label { font-size:10px; font-weight:700; color:var(--dim); letter-spacing:2px; margin-bottom:0; }
+  .log-area { flex:1; overflow-y:auto; padding:10px 14px; }
+  .log-entry {
+    font-family:'JetBrains Mono',monospace; font-size:10px;
+    padding:5px 8px; margin-bottom:4px;
+    border-left:2px solid var(--border);
+    animation: fadeIn 0.3s ease;
+    line-height:1.5;
+  }
+  .log-entry.info  { border-left-color:var(--teal);  color:var(--teal2); }
+  .log-entry.warn  { border-left-color:var(--gold);  color:var(--gold);  }
+  .log-entry.error { border-left-color:var(--red);   color:#E57373;      }
+  .log-entry.sys   { border-left-color:var(--border); color:var(--dim);   }
+  @keyframes fadeIn { from{opacity:0; transform:translateX(-6px)} to{opacity:1; transform:none} }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    padding:10px 18px;
+    border-top:1px solid var(--border);
+    display:flex; gap:16px;
+    background: rgba(0,0,0,0.2);
+    flex-shrink:0;
+  }
+  .stat { text-align:center; }
+  .stat-val { font-size:20px; font-weight:800; font-family:'JetBrains Mono',monospace; }
+  .stat-lbl { font-size:9px; color:var(--dim); letter-spacing:1px; }
+  .stat-clean  .stat-val { color:#4FC3F7; }
+  .stat-inf    .stat-val { color:var(--red); }
+  .stat-immune .stat-val { color:var(--green); }
+
+  /* ── EMAIL MODE ── */
+  .btn-email {
+    width:100%; padding:9px; margin-top:8px;
+    font-family:'Syne',sans-serif; font-size:12px; font-weight:700;
+    cursor:pointer; border: 1px solid #F48FB1;
+    background: transparent; color: #F48FB1;
+    letter-spacing:0.5px; transition: all 0.2s;
+    display: none;
+  }
+  .btn-email.visible { display: block; }
+  .btn-email.active  { background: #C2185B; color:#fff; border-color:#C2185B; box-shadow: 0 0 10px rgba(194,24,91,0.4); }
+  .email-hint {
+    display:none; margin-top:6px;
+    padding:8px 12px;
+    border:1px solid #F48FB1;
+    background: rgba(194,24,91,0.08);
+    font-size:11px; font-family:'JetBrains Mono',monospace;
+    color:#F48FB1; line-height:1.6;
+  }
+  .email-hint.visible { display:block; }
+
+  /* ── TROJAN SPECIAL ── */
+  .trojan-hint {
+    display:none;
+    padding:10px 12px; margin-top:8px;
+    border:1px solid var(--gold);
+    background: rgba(240,165,0,0.06);
+    font-size:11px; font-family:'JetBrains Mono',monospace;
+    color:var(--gold); line-height:1.6;
+  }
+  .trojan-hint.visible { display:block; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-area">
+    <div class="logo-badge">I·TeCH</div>
+    <div>
+      <div class="header-title">Simulasi Penyebaran Malicious Software</div>
+      <div class="header-sub">Sistem Keamanan Jaringan Komputer · Arismunandar, M.T.I.</div>
+    </div>
+  </div>
+  <div class="badge-week">MINGGU 6</div>
+</header>
+
+<div class="main">
+
+  <!-- LOG PANEL (KIRI) -->
+  <div class="log-panel">
+    <div class="log-panel-header">
+      <div class="log-label">ACTIVITY LOG</div>
+    </div>
+    <div class="log-area">
+      <div id="logContainer"></div>
+    </div>
+    <!-- STATS -->
+    <div class="stats-bar">
+      <div class="stat stat-clean"><div class="stat-val" id="statClean">15</div><div class="stat-lbl">BERSIH</div></div>
+      <div class="stat stat-inf"><div class="stat-val" id="statInf">0</div><div class="stat-lbl">INFEKSI</div></div>
+      <div class="stat stat-immune"><div class="stat-val" id="statImm">0</div><div class="stat-lbl">IMUN</div></div>
+    </div>
+  </div>
+
+  <!-- CANVAS (TENGAH) -->
+  <div class="canvas-area">
+    <canvas id="netCanvas"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#4FC3F7"></div>Bersih</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#E57373"></div>Terinfeksi</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#81C784"></div>Imun / Patched</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#FFD54F"></div>Target (Trojan)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#F48FB1"></div>Via Email</div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR KANAN -->
+  <div class="sidebar" id="sidebar">
+
+    <!-- TABS -->
+    <div class="tabs">
+      <div class="tab active" data-mode="virus">🦠 VIRUS</div>
+      <div class="tab" data-mode="worm">🌐 WORM</div>
+      <div class="tab" data-mode="trojan">🎭 TROJAN</div>
+    </div>
+
+    <!-- INFO -->
+    <div class="info-panel mode-virus" id="infoPanel">
+      <div class="mode-badge">VIRUS</div>
+      <div class="info-title" id="infoTitle">Virus Komputer</div>
+      <div class="info-desc" id="infoDesc">Program yang menggandakan diri dengan menempel ke file lain. Butuh AKSI MANUSIA untuk menyebar — klik node bersih untuk "berbagi file" yang terinfeksi.</div>
+      <div class="key-fact" id="keyFact">⚡ Klik node bersih (biru) untuk mensimulasikan pengguna yang membuka file terinfeksi secara manual.</div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="controls">
+      <div class="controls-label">KONTROL SIMULASI</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnStart">▶ MULAI</button>
+        <button class="btn btn-secondary" id="btnReset">↺ RESET</button>
+      </div>
+      <button class="btn btn-infect" id="btnInfect">⚡ SEBAR KE SEMUA (WORM)</button>
+      <button class="btn btn-email" id="btnEmail">📧 MODE EMAIL: OFF</button>
+      <div class="email-hint" id="emailHint">Mode Email aktif — klik PC mana saja (tidak harus tetangga LAN) untuk kirim attachment virus via email.</div>
+      <div class="trojan-hint" id="trojanHint">🎭 Klik node bersih mana saja untuk menjadikannya TARGET Trojan. Trojan akan "bersembunyi" dan mengirim data diam-diam.</div>
+      <div class="speed-row">
+        <label>Speed</label>
+        <input type="range" id="speedSlider" min="1" max="5" value="3">
+        <div class="speed-val" id="speedVal">3x</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════
+const MODES = {
+  virus: {
+    badge: "VIRUS",
+    title: "Virus Komputer",
+    desc: "Virus butuh AKSI MANUSIA untuk menyebar. Dua cara: klik node via LAN (tetangga langsung), atau aktifkan mode Email untuk kirim attachment ke PC mana saja.",
+    fact: "⚡ Klik node biru = buka file via LAN. Aktifkan 📧 EMAIL untuk simulasi penyebaran via attachment.",
+    color: "#12A0B5",
+    infBtn: false,
+    trojan: false,
+    emailBtn: true,
+  },
+  worm: {
+    badge: "WORM",
+    title: "Worm Komputer",
+    desc: "Program mandiri yang menyebar OTOMATIS via jaringan tanpa bantuan manusia. Tekan tombol SEBAR untuk lihat worm menginfeksi semua node sendiri.",
+    fact: "🌐 Worm Slammer (2003): 376 byte menginfeksi 75.000 server dalam 10 menit tanpa satu pun klik pengguna.",
+    color: "#E57373",
+    infBtn: true,
+    trojan: false,
+    emailBtn: false,
+  },
+  trojan: {
+    badge: "TROJAN",
+    title: "Trojan Horse",
+    desc: "Menyamar sebagai aplikasi sah. Node target berwarna kuning — Trojan 'bersembunyi' dan membuka backdoor diam-diam tanpa replikasi.",
+    fact: "🎭 Trojan TIDAK menyebar — ia hanya membuka pintu belakang di satu node target. Klik node untuk jadi target.",
+    color: "#F0A500",
+    infBtn: false,
+    trojan: true,
+    emailBtn: false,
+  },
+};
+
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+const canvas = document.getElementById('netCanvas');
+const ctx = canvas.getContext('2d');
+let nodes = [], edges = [], packets = [];
+let mode = 'virus';
+let running = false;
+let emailMode = false;
+let speed = 3;
+let animId = null;
+let logCount = 0;
+
+const N_NODES = 15;
+const IMMUNE_NODES = [3, 7, 11, 13]; // PC yang sudah punya antivirus terbaru & patched
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+function resize() {
+  canvas.width  = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+  initNetwork();
+}
+
+function initNetwork() {
+  nodes = [];
+  edges = [];
+  packets = [];
+
+  const W = canvas.width, H = canvas.height;
+  const cx = W/2, cy = H/2;
+  const R  = Math.min(W,H) * 0.34;
+
+  // Place nodes in rough circle with some jitter
+  for (let i = 0; i < N_NODES; i++) {
+    const angle = (i / N_NODES) * Math.PI * 2 - Math.PI/2;
+    const r = R * (0.7 + Math.random() * 0.6);
+    const isImmune   = IMMUNE_NODES.includes(i);
+    const isInfected = i === 0;
+    nodes.push({
+      id: i,
+      x: cx + Math.cos(angle) * r,
+      y: cy + Math.sin(angle) * r,
+      state: isInfected ? 'infected' : isImmune ? 'immune' : 'clean',
+      pulse: 0,
+      label: `PC-${String(i+1).padStart(2,'0')}`,
+    });
+  }
+
+  // Connect nodes (ring + random cross edges)
+  for (let i = 0; i < N_NODES; i++) {
+    edges.push([i, (i+1) % N_NODES]);
+    if (i % 3 === 0) edges.push([i, (i + Math.floor(N_NODES/3)) % N_NODES]);
+  }
+
+  clearLog();
+  addLog('sys', `Jaringan diinisialisasi — ${N_NODES} node komputer`);
+  addLog('error', `PC-01 terinfeksi sebagai Patient Zero`);
+  addLog('info', `🛡 ${IMMUNE_NODES.length} PC sudah imun (antivirus terbaru + patched): ${IMMUNE_NODES.map(i=>'PC-'+String(i+1).padStart(2,'0')).join(', ')}`);
+  updateStats();
+}
+
+// ═══════════════════════════════════════
+// DRAW
+// ═══════════════════════════════════════
+function getNodeColor(n) {
+  if (n.state === 'infected') return '#E57373';
+  if (n.state === 'immune')   return '#81C784';
+  if (n.state === 'target')   return '#FFD54F';
+  return '#4FC3F7';
+}
+
+function drawEdge(a, b) {
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.strokeStyle = 'rgba(36,51,82,0.8)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+function drawNode(n) {
+  const r = 22;
+  const color = getNodeColor(n);
+
+  // Glow for infected
+  if (n.state === 'infected') {
+    const grd = ctx.createRadialGradient(n.x, n.y, r, n.x, n.y, r*2.8);
+    grd.addColorStop(0, 'rgba(229,115,115,0.3)');
+    grd.addColorStop(1, 'rgba(229,115,115,0)');
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r*2.8, 0, Math.PI*2);
+    ctx.fillStyle = grd;
+    ctx.fill();
+  }
+  if (n.state === 'target') {
+    const grd = ctx.createRadialGradient(n.x, n.y, r, n.x, n.y, r*2.5);
+    grd.addColorStop(0, 'rgba(240,165,0,0.35)');
+    grd.addColorStop(1, 'rgba(240,165,0,0)');
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r*2.5, 0, Math.PI*2);
+    ctx.fillStyle = grd;
+    ctx.fill();
+  }
+
+  // Pulse ring
+  if (n.pulse > 0) {
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r + n.pulse * 20, 0, Math.PI*2);
+    ctx.strokeStyle = color + Math.floor((1 - n.pulse) * 255).toString(16).padStart(2,'0');
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    n.pulse = Math.max(0, n.pulse - 0.025 * speed);
+  }
+
+  // Main circle
+  ctx.beginPath();
+  ctx.arc(n.x, n.y, r, 0, Math.PI*2);
+  ctx.fillStyle = n.state === 'clean' ? '#162033' : 'rgba(22,32,51,0.7)';
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = n.state === 'infected' ? 2.5 : 1.5;
+  ctx.stroke();
+
+  // Icon
+  ctx.font = '14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const icon = n.state === 'infected' ? '🦠' : n.state === 'immune' ? '🛡' : n.state === 'target' ? '🎭' : '💻';
+  ctx.fillText(icon, n.x, n.y - 2);
+
+  // Label
+  ctx.font = '600 9px JetBrains Mono, monospace';
+  ctx.fillStyle = color;
+  ctx.fillText(n.label, n.x, n.y + r + 12);
+}
+
+function drawPacket(p) {
+  const t   = p.progress;
+  const src = nodes[p.src];
+  const dst = nodes[p.dst];
+  const x   = src.x + (dst.x - src.x) * t;
+  const y   = src.y + (dst.y - src.y) * t;
+
+  ctx.beginPath();
+  ctx.arc(x, y, 5, 0, Math.PI*2);
+  ctx.fillStyle = p.color;
+  ctx.fill();
+
+  // Trail
+  ctx.beginPath();
+  const tx = src.x + (dst.x - src.x) * Math.max(0, t - 0.15);
+  const ty = src.y + (dst.y - src.y) * Math.max(0, t - 0.15);
+  ctx.moveTo(tx, ty);
+  ctx.lineTo(x, y);
+  ctx.strokeStyle = p.color + '66';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Grid bg
+  ctx.strokeStyle = 'rgba(36,51,82,0.3)';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x < canvas.width; x += 40) {
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+  }
+  for (let y = 0; y < canvas.height; y += 40) {
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+  }
+
+  edges.forEach(([a,b]) => drawEdge(nodes[a], nodes[b]));
+  nodes.forEach(drawNode);
+  packets.forEach(drawPacket);
+}
+
+// ═══════════════════════════════════════
+// VIRUS LOGIC — manual click to spread
+// ═══════════════════════════════════════
+canvas.addEventListener('click', (e) => {
+  if (!running) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  nodes.forEach(n => {
+    const dx = n.x - mx, dy = n.y - my;
+    if (Math.sqrt(dx*dx+dy*dy) < 26) {
+      // Klik node imun — berlaku di semua mode
+      if (n.state === 'immune') {
+        if (mode === 'virus' && emailMode) {
+          addLog('info', `🛡 ${n.label}: Email attachment DIBLOKIR — antivirus mendeteksi virus di attachment!`);
+        } else {
+          addLog('info', `🛡 ${n.label}: IMUN — antivirus terbaru aktif, serangan diblokir!`);
+        }
+        n.pulse = 1;
+        return;
+      }
+      if (mode === 'virus') {
+        if (n.state === 'clean') {
+          if (emailMode) {
+            // Email: bisa infeksi PC mana saja tanpa perlu tetangga LAN
+            const infectedIds = nodes.filter(x => x.state === 'infected').map(x => x.id);
+            if (infectedIds.length > 0) {
+              const src = infectedIds[0];
+              addLog('warn', `📧 Email attachment terinfeksi dikirim: ${nodes[src].label} → ${n.label}`);
+              launchPacket(src, n.id, '#F48FB1', () => {
+                infectNode(n.id);
+                addLog('error', `📬 ${n.label}: attachment dibuka → TERINFEKSI via Email!`);
+              });
+            }
+          } else {
+            // LAN: hanya bisa infeksi tetangga langsung
+            const infectedNeighbors = edges
+              .filter(([a,b]) => (a===n.id || b===n.id))
+              .map(([a,b]) => a===n.id ? b : a)
+              .filter(id => nodes[id].state === 'infected');
+            if (infectedNeighbors.length > 0) {
+              const src = infectedNeighbors[0];
+              launchPacket(src, n.id, '#12A0B5', () => infectNode(n.id));
+              addLog('warn', `👆 User klik: membuka file dari ${nodes[src].label} → ${n.label} via LAN`);
+            } else {
+              addLog('sys', `💡 ${n.label}: belum terjangkau via LAN — aktifkan 📧 MODE EMAIL untuk menyebar tanpa jalur LAN`);
+            }
+          }
+        } else if (n.state === 'infected') {
+          addLog('error', `${n.label} sudah terinfeksi!`);
+        }
+      } else if (mode === 'trojan') {
+        if (n.state === 'clean') {
+          n.state = 'target';
+          n.pulse = 1;
+          addLog('warn', `🎭 ${n.label} dijadikan TARGET Trojan — aplikasi palsu diinstall`);
+          setTimeout(() => {
+            activateTrojan(n.id);
+          }, 1500 / speed);
+          updateStats();
+        } else if (n.state === 'immune') {
+          // Trojan mencoba masuk tapi diblokir antivirus
+          addLog('info', `🛡 ${n.label}: Trojan DIBLOKIR — antivirus mendeteksi aplikasi palsu!`);
+          n.pulse = 1;
+          // Kirim paket visual yang "ditolak" — merah bergerak ke node lalu mental balik
+          const infectedIds = nodes.filter(x => x.state === 'infected').map(x => x.id);
+          if (infectedIds.length > 0) {
+            launchPacket(infectedIds[0], n.id, '#F0A500', () => {
+              addLog('info', `🚫 Koneksi Trojan ke ${n.label} ditolak — patch aktif`);
+            });
+          }
+        } else if (n.state === 'infected') {
+          addLog('error', `${n.label} sudah terinfeksi Trojan!`);
+        }
+      }
+    }
+  });
+});
+
+// ═══════════════════════════════════════
+// WORM LOGIC — auto spread
+// ═══════════════════════════════════════
+let wormInterval = null;
+const wormVisited = new Set(); // track node yang sudah dicoba worm
+
+function startWorm() {
+  if (wormInterval) return;
+  wormVisited.clear();
+  addLog('error', `🌐 Worm aktif — menyebar otomatis ke semua node terhubung...`);
+  wormInterval = setInterval(() => {
+    let spread = false;
+    const infectedIds = nodes.filter(n => n.state === 'infected').map(n => n.id);
+    infectedIds.forEach(sid => {
+      edges.forEach(([a,b]) => {
+        const tid = a === sid ? b : b === sid ? a : -1;
+        if (tid >= 0 && nodes[tid].state === 'clean') {
+          spread = true;
+          launchPacket(sid, tid, '#E57373', () => infectNode(tid));
+        } else if (tid >= 0 && nodes[tid].state === 'immune' && !wormVisited.has(tid)) {
+          wormVisited.add(tid);
+          spread = true; // hanya sekali per node imun
+          launchPacket(sid, tid, '#E57373', () => {
+            addLog('info', `🛡 ${nodes[tid].label}: Worm DIBLOKIR — antivirus & patch aktif`);
+            nodes[tid].pulse = 1;
+          });
+        }
+      });
+    });
+    // Berhenti jika tidak ada lagi node bersih yang bisa dijangkau
+    const cleanReachable = nodes.some(n => {
+      if (n.state !== 'clean') return false;
+      return edges.some(([a,b]) => {
+        const other = a === n.id ? b : b === n.id ? a : -1;
+        return other >= 0 && nodes[other].state === 'infected';
+      });
+    });
+    if (!spread || !cleanReachable) {
+      clearInterval(wormInterval);
+      wormInterval = null;
+      const totalInf = nodes.filter(n => n.state === 'infected').length;
+      const totalImm = nodes.filter(n => n.state === 'immune').length;
+      addLog('sys', `✓ Worm selesai — ${totalInf} PC terinfeksi, ${totalImm} PC berhasil bertahan (imun)`);
+    }
+  }, 800 / speed);
+}
+
+// ═══════════════════════════════════════
+// TROJAN LOGIC
+// ═══════════════════════════════════════
+function activateTrojan(nodeId) {
+  const n = nodes[nodeId];
+  if (!n || n.state !== 'target') return;
+  addLog('error', `🎭 ${n.label}: backdoor dibuka diam-diam`);
+  n.state = 'infected';
+  n.pulse = 1;
+
+  // Send fake "data packets" back to infected (patient zero)
+  const infectedIds = nodes.filter(x => x.state === 'infected' && x.id !== nodeId).map(x => x.id);
+  if (infectedIds.length > 0) {
+    let delay = 0;
+    ['password.txt','credit_card.db','id_card.jpg'].forEach(file => {
+      setTimeout(() => {
+        addLog('error', `📤 ${n.label} → ${nodes[0].label}: mengirim ${file} (data dicuri!)`);
+        launchPacket(nodeId, 0, '#F0A500', ()=>{});
+      }, delay);
+      delay += 600 / speed;
+    });
+  }
+  updateStats();
+}
+
+// ═══════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════
+function infectNode(id) {
+  if (nodes[id].state !== 'clean') return; // immune & infected both blocked
+  nodes[id].state = 'infected';
+  nodes[id].pulse = 1;
+  addLog('error', `🦠 ${nodes[id].label} TERINFEKSI`);
+  updateStats();
+
+  // Check win/lose
+  const cleanCount = nodes.filter(n => n.state === 'clean').length;
+  if (cleanCount === 0) {
+    addLog('warn', `⚠️ Seluruh jaringan terinfeksi! Lakukan isolasi segera.`);
+  }
+}
+
+function launchPacket(src, dst, color, onArrive) {
+  packets.push({ src, dst, color, progress: 0, onArrive, done: false });
+}
+
+function updateStats() {
+  document.getElementById('statClean').textContent = nodes.filter(n=>n.state==='clean').length;
+  document.getElementById('statInf').textContent   = nodes.filter(n=>n.state==='infected').length;
+  document.getElementById('statImm').textContent   = nodes.filter(n=>n.state==='immune').length;
+}
+
+function addLog(type, msg) {
+  const c = document.getElementById('logContainer');
+  const now = new Date();
+  const ts  = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  const div = document.createElement('div');
+  div.className = `log-entry ${type}`;
+  div.textContent = `[${ts}] ${msg}`;
+  c.prepend(div);
+  logCount++;
+  if (logCount > 60) c.lastChild?.remove();
+}
+
+function clearLog() {
+  document.getElementById('logContainer').innerHTML = '';
+  logCount = 0;
+}
+
+// ═══════════════════════════════════════
+// ANIMATION LOOP
+// ═══════════════════════════════════════
+let last = 0;
+function loop(ts) {
+  const dt = Math.min((ts - last) / 16, 3);
+  last = ts;
+
+  // Move packets
+  packets.forEach(p => {
+    if (p.done) return;
+    p.progress += 0.018 * speed * dt;
+    if (p.progress >= 1) {
+      p.progress = 1;
+      p.done = true;
+      p.onArrive();
+    }
+  });
+  packets = packets.filter(p => !p.done);
+
+  draw();
+  animId = requestAnimationFrame(loop);
+}
+
+// ═══════════════════════════════════════
+// UI EVENTS
+// ═══════════════════════════════════════
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    if (running) return; // don't switch while running
+    mode = tab.dataset.mode;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    updateModeUI();
+    initNetwork();
+  });
+});
+
+function updateModeUI() {
+  const m = MODES[mode];
+  const panel = document.getElementById('infoPanel');
+  panel.className = `info-panel mode-${mode}`;
+  document.querySelector('.mode-badge').textContent = m.badge;
+  document.getElementById('infoTitle').textContent = m.title;
+  document.getElementById('infoDesc').textContent  = m.desc;
+  document.getElementById('keyFact').textContent   = m.fact;
+  document.getElementById('sidebar').className = `sidebar`;
+
+  const infBtn = document.getElementById('btnInfect');
+  infBtn.classList.toggle('visible', m.infBtn);
+
+  const trojanHint = document.getElementById('trojanHint');
+  trojanHint.classList.toggle('visible', m.trojan);
+
+  // Email button — hanya tampil di mode Virus
+  const emailBtn = document.getElementById('btnEmail');
+  emailBtn.classList.toggle('visible', m.emailBtn);
+  // Reset email mode saat ganti tab
+  emailMode = false;
+  emailBtn.textContent = '📧 MODE EMAIL: OFF';
+  emailBtn.classList.remove('active');
+  document.getElementById('emailHint').classList.remove('visible');
+}
+
+document.getElementById('btnEmail').addEventListener('click', () => {
+  if (!running) { addLog('sys', 'Tekan MULAI dulu!'); return; }
+  emailMode = !emailMode;
+  const btn = document.getElementById('btnEmail');
+  const hint = document.getElementById('emailHint');
+  btn.textContent = emailMode ? '📧 MODE EMAIL: ON' : '📧 MODE EMAIL: OFF';
+  btn.classList.toggle('active', emailMode);
+  hint.classList.toggle('visible', emailMode);
+  if (emailMode) addLog('warn', `📧 Mode Email aktif — klik PC mana saja untuk kirim attachment virus`);
+  else addLog('sys', '📧 Mode Email dinonaktifkan — kembali ke penyebaran via LAN');
+});
+
+document.getElementById('btnStart').addEventListener('click', () => {
+  if (!running) {
+    running = true;
+    document.getElementById('btnStart').textContent = '⏸ PAUSE';
+    document.getElementById('btnStart').classList.remove('btn-primary');
+    document.getElementById('btnStart').style.background = '#243352';
+    addLog('info', `Simulasi ${mode.toUpperCase()} dimulai`);
+    if (!animId) { last = performance.now(); animId = requestAnimationFrame(loop); }
+  } else {
+    running = false;
+    document.getElementById('btnStart').textContent = '▶ LANJUT';
+    document.getElementById('btnStart').style.background = '';
+    document.getElementById('btnStart').classList.add('btn-primary');
+    addLog('sys', 'Simulasi dijeda');
+  }
+});
+
+document.getElementById('btnReset').addEventListener('click', () => {
+  running = false;
+  emailMode = false;
+  wormVisited.clear();
+  document.getElementById('btnEmail').textContent = '📧 MODE EMAIL: OFF';
+  document.getElementById('btnEmail').classList.remove('active');
+  document.getElementById('emailHint').classList.remove('visible');
+  if (wormInterval) { clearInterval(wormInterval); wormInterval = null; }
+  document.getElementById('btnStart').textContent = '▶ MULAI';
+  document.getElementById('btnStart').style.background = '';
+  document.getElementById('btnStart').classList.add('btn-primary');
+  initNetwork();
+  addLog('sys', 'Simulasi direset');
+});
+
+document.getElementById('btnInfect').addEventListener('click', () => {
+  if (!running) { addLog('sys', 'Tekan MULAI dulu!'); return; }
+  startWorm();
+});
+
+document.getElementById('speedSlider').addEventListener('input', (e) => {
+  speed = parseInt(e.target.value);
+  document.getElementById('speedVal').textContent = speed + 'x';
+  if (wormInterval) { clearInterval(wormInterval); wormInterval = null; startWorm(); }
+});
+
+// ═══════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════
+window.addEventListener('resize', resize);
+resize();
+updateModeUI();
+last = performance.now();
+animId = requestAnimationFrame(loop);
+addLog('sys', 'Demo Malicious Software siap — pilih mode dan tekan MULAI');
+</script>
+</body>
+</html>
