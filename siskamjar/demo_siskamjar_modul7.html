@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulasi DHCP Snooping — Siskamjar Modul 7</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap');
+
+:root {
+  --navy:    #0f1923;
+  --navy2:   #162030;
+  --navy3:   #1e2d40;
+  --teal:    #00c2a8;
+  --teal2:   #00957e;
+  --red:     #ff4d4d;
+  --red2:    #cc2222;
+  --gold:    #f5a623;
+  --green:   #2ecc71;
+  --dim:     #8899aa;
+  --white:   #e8f0f8;
+  --mono:    'JetBrains Mono', monospace;
+  --sans:    'Syne', sans-serif;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--navy);
+  color: var(--white);
+  font-family: var(--sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Grid background */
+body::before {
+  content:'';
+  position:fixed; inset:0;
+  background-image:
+    linear-gradient(rgba(0,194,168,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,194,168,.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events:none;
+  z-index:0;
+}
+
+.wrap { position:relative; z-index:1; max-width:960px; margin:0 auto; padding:24px 20px 60px; }
+
+/* ── HEADER ─────────────────────────────────── */
+header {
+  display:flex; align-items:center; gap:16px;
+  border-bottom:1px solid rgba(0,194,168,.25);
+  padding-bottom:20px; margin-bottom:28px;
+}
+.badge {
+  background:var(--teal2); color:var(--navy);
+  font-size:10px; font-weight:700; letter-spacing:.12em;
+  padding:4px 10px; border-radius:3px; text-transform:uppercase; white-space:nowrap;
+}
+header h1 { font-size:22px; font-weight:800; line-height:1.2; }
+header p  { font-size:13px; color:var(--dim); margin-top:3px; }
+
+/* ── SCENARIO BAR ────────────────────────────── */
+.scenario-bar {
+  background:var(--navy2);
+  border:1px solid rgba(0,194,168,.2);
+  border-radius:10px;
+  padding:16px 20px;
+  margin-bottom:24px;
+  display:flex; align-items:center; gap:12px;
+}
+.scenario-bar .label { font-size:11px; color:var(--teal); font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
+.scenario-bar .desc  { font-size:13px; color:var(--white); margin-top:3px; }
+
+/* ── TOPOLOGY ────────────────────────────────── */
+.topology {
+  display:grid;
+  grid-template-columns: 1fr 180px 1fr;
+  grid-template-rows: auto auto auto;
+  gap:0;
+  margin-bottom:28px;
+  position:relative;
+}
+
+.topo-node {
+  background:var(--navy2);
+  border:2px solid rgba(0,194,168,.25);
+  border-radius:10px;
+  padding:14px 12px;
+  text-align:center;
+  position:relative;
+  transition: border-color .3s, box-shadow .3s;
+}
+.topo-node.trusted  { border-color:var(--teal); }
+.topo-node.untrusted{ border-color:rgba(255,77,77,.4); }
+.topo-node.active   { box-shadow:0 0 20px rgba(0,194,168,.4); }
+.topo-node.attacked { box-shadow:0 0 20px rgba(255,77,77,.5); border-color:var(--red); }
+
+.node-icon { font-size:28px; display:block; margin-bottom:6px; }
+.node-label { font-size:12px; font-weight:700; color:var(--white); }
+.node-sub   { font-size:10px; color:var(--dim); margin-top:3px; font-family:var(--mono); }
+.node-badge {
+  display:inline-block;
+  font-size:9px; font-weight:700; letter-spacing:.08em;
+  padding:2px 7px; border-radius:3px; margin-top:6px;
+  text-transform:uppercase;
+}
+.nb-trusted   { background:rgba(0,194,168,.2); color:var(--teal); border:1px solid rgba(0,194,168,.4); }
+.nb-untrusted { background:rgba(255,77,77,.15); color:var(--red); border:1px solid rgba(255,77,77,.3); }
+.nb-switch    { background:rgba(245,166,35,.15); color:var(--gold); border:1px solid rgba(245,166,35,.3); }
+
+/* Switch node center */
+.topo-switch {
+  grid-column:2; grid-row:1/3;
+  display:flex; flex-direction:column;
+  justify-content:center; align-items:center;
+  background:var(--navy3);
+  border:2px solid var(--gold);
+  border-radius:12px;
+  padding:16px 10px;
+  margin:0 8px;
+  transition: box-shadow .3s;
+}
+.topo-switch.snooping-active { box-shadow:0 0 24px rgba(245,166,35,.4); }
+
+/* Cables / connections */
+.cable {
+  position:absolute;
+  background:rgba(0,194,168,.3);
+  transition:background .4s;
+  pointer-events:none;
+}
+.cable.red  { background:rgba(255,77,77,.5); }
+.cable.green{ background:rgba(46,204,113,.7); }
+.cable.blocked { background:rgba(255,77,77,.15); }
+
+/* Client row */
+.client-row {
+  grid-column:1/-1;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin-top:16px;
+}
+.client-node {
+  background:var(--navy2);
+  border:1.5px solid rgba(255,255,255,.1);
+  border-radius:8px;
+  padding:12px 10px;
+  text-align:center;
+  transition:border-color .3s, box-shadow .3s;
+}
+.client-node.got-ip-good { border-color:var(--green); box-shadow:0 0 12px rgba(46,204,113,.25); }
+.client-node.got-ip-bad  { border-color:var(--red);   box-shadow:0 0 12px rgba(255,77,77,.25); }
+.client-node.waiting     { border-color:var(--gold);  }
+
+.client-ip {
+  font-family:var(--mono);
+  font-size:11px;
+  margin-top:5px;
+  padding:3px 8px;
+  border-radius:4px;
+  display:inline-block;
+}
+.ip-good { background:rgba(46,204,113,.15); color:var(--green); }
+.ip-bad  { background:rgba(255,77,77,.15);  color:var(--red); }
+.ip-none { background:rgba(255,255,255,.05); color:var(--dim); }
+
+/* ── SVG ARROWS ──────────────────────────────── */
+#topo-svg {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+  pointer-events:none; overflow:visible;
+}
+
+/* ── PACKET ANIMATION ────────────────────────── */
+.packet {
+  position:absolute;
+  width:36px; height:20px;
+  border-radius:4px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:9px; font-weight:700; letter-spacing:.05em;
+  font-family:var(--mono);
+  z-index:10;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .2s;
+}
+.pkt-discover { background:#1a3a2a; color:var(--teal); border:1px solid var(--teal2); }
+.pkt-offer    { background:#1a2d3a; color:#5bc8f5; border:1px solid #2a8aaa; }
+.pkt-blocked  { background:#3a1010; color:var(--red); border:1px solid var(--red2); }
+.pkt-good     { background:#1a3a20; color:var(--green); border:1px solid #1a8a40; }
+
+/* ── CONTROLS ────────────────────────────────── */
+.controls {
+  display:flex; gap:10px; flex-wrap:wrap;
+  margin-bottom:24px; align-items:center;
+}
+.btn {
+  font-family:var(--sans);
+  font-size:13px; font-weight:700;
+  padding:10px 20px; border-radius:6px;
+  border:none; cursor:pointer;
+  letter-spacing:.04em;
+  transition:all .2s;
+  display:flex; align-items:center; gap:8px;
+}
+.btn:disabled { opacity:.4; cursor:not-allowed; }
+.btn-teal  { background:var(--teal2); color:var(--navy); }
+.btn-teal:hover:not(:disabled)  { background:var(--teal); }
+.btn-red   { background:#7a1515; color:var(--white); border:1px solid var(--red2); }
+.btn-red:hover:not(:disabled)   { background:var(--red2); }
+.btn-gold  { background:#6a4a00; color:var(--gold); border:1px solid rgba(245,166,35,.4); }
+.btn-gold:hover:not(:disabled)  { background:#7a5a10; }
+.btn-ghost { background:transparent; color:var(--dim); border:1px solid rgba(255,255,255,.1); }
+.btn-ghost:hover:not(:disabled) { color:var(--white); border-color:rgba(255,255,255,.3); }
+
+.toggle-row { display:flex; align-items:center; gap:10px; margin-left:auto; }
+.toggle-label { font-size:12px; color:var(--dim); }
+.toggle {
+  position:relative; width:44px; height:24px; cursor:pointer;
+}
+.toggle input { opacity:0; width:0; height:0; }
+.toggle-slider {
+  position:absolute; inset:0;
+  background:rgba(255,255,255,.1); border-radius:12px;
+  transition:.3s;
+}
+.toggle-slider::before {
+  content:''; position:absolute;
+  width:18px; height:18px; left:3px; top:3px;
+  background:var(--dim); border-radius:50%;
+  transition:.3s;
+}
+.toggle input:checked + .toggle-slider { background:var(--teal2); }
+.toggle input:checked + .toggle-slider::before { transform:translateX(20px); background:var(--navy); }
+
+/* ── LOG PANEL ───────────────────────────────── */
+.log-panel {
+  background:var(--navy2);
+  border:1px solid rgba(0,194,168,.15);
+  border-radius:10px;
+  overflow:hidden;
+}
+.log-header {
+  background:var(--navy3);
+  padding:10px 16px;
+  display:flex; align-items:center; justify-content:space-between;
+  border-bottom:1px solid rgba(0,194,168,.15);
+}
+.log-header span { font-size:11px; font-weight:700; color:var(--teal); letter-spacing:.1em; text-transform:uppercase; }
+.log-clear { font-size:11px; color:var(--dim); cursor:pointer; background:none; border:none; font-family:var(--sans); }
+.log-clear:hover { color:var(--white); }
+.log-body { padding:12px 16px; max-height:220px; overflow-y:auto; font-family:var(--mono); font-size:11.5px; line-height:1.8; }
+.log-line { display:flex; gap:10px; }
+.log-time { color:var(--dim); flex-shrink:0; }
+.log-ok   { color:var(--green); }
+.log-err  { color:var(--red); }
+.log-warn { color:var(--gold); }
+.log-info { color:#5bc8f5; }
+.log-dim  { color:var(--dim); }
+
+/* ── STATS BAR ───────────────────────────────── */
+.stats {
+  display:grid; grid-template-columns:repeat(4,1fr); gap:10px;
+  margin-bottom:20px;
+}
+.stat-card {
+  background:var(--navy2);
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:8px;
+  padding:14px;
+  text-align:center;
+}
+.stat-val { font-size:28px; font-weight:800; line-height:1; }
+.stat-lbl { font-size:10px; color:var(--dim); margin-top:5px; letter-spacing:.06em; text-transform:uppercase; }
+.sv-green { color:var(--green); }
+.sv-red   { color:var(--red); }
+.sv-teal  { color:var(--teal); }
+.sv-gold  { color:var(--gold); }
+
+/* ── INFO PANEL ──────────────────────────────── */
+.info-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:20px; }
+.info-card {
+  background:var(--navy2);
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:8px;
+  padding:14px 16px;
+}
+.info-card h3 { font-size:12px; font-weight:700; color:var(--teal); letter-spacing:.08em; text-transform:uppercase; margin-bottom:10px; }
+.info-card li { font-size:12px; color:var(--dim); margin-bottom:5px; list-style:none; padding-left:16px; position:relative; }
+.info-card li::before { content:'→'; position:absolute; left:0; color:var(--teal); }
+.info-card li span { color:var(--white); }
+
+/* ── STEP INDICATOR ──────────────────────────── */
+.step-bar {
+  display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap;
+}
+.step-pill {
+  font-size:11px; font-weight:600;
+  padding:5px 12px; border-radius:20px;
+  border:1px solid rgba(255,255,255,.1);
+  color:var(--dim);
+  transition:all .3s;
+}
+.step-pill.active { background:rgba(0,194,168,.15); border-color:var(--teal); color:var(--teal); }
+.step-pill.done   { background:rgba(46,204,113,.1); border-color:rgba(46,204,113,.4); color:var(--green); }
+
+/* ── BINDING TABLE ───────────────────────────── */
+.binding-table {
+  width:100%; border-collapse:collapse;
+  font-family:var(--mono); font-size:11px;
+  margin-top:8px;
+}
+.binding-table th {
+  background:var(--navy3); color:var(--teal);
+  padding:6px 10px; text-align:left;
+  font-size:10px; letter-spacing:.06em; text-transform:uppercase;
+  font-family:var(--sans); font-weight:700;
+}
+.binding-table td {
+  padding:6px 10px; border-top:1px solid rgba(255,255,255,.05);
+  color:var(--dim);
+}
+.binding-table td.mac  { color:#5bc8f5; }
+.binding-table td.ip   { color:var(--green); }
+.binding-table td.port { color:var(--gold); }
+
+/* scrollbar */
+.log-body::-webkit-scrollbar { width:4px; }
+.log-body::-webkit-scrollbar-track { background:transparent; }
+.log-body::-webkit-scrollbar-thumb { background:rgba(0,194,168,.3); border-radius:2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HEADER -->
+<header>
+  <div>
+    <div class="badge">Siskamjar Modul 7</div>
+    <h1>Simulasi DHCP Snooping</h1>
+    <p>Trusted Port · Rogue DHCP · Binding Table · Packet Flow</p>
+  </div>
+</header>
+
+<!-- STEP INDICATOR -->
+<div class="step-bar">
+  <div class="step-pill active" id="step-1">① DHCP Snooping OFF</div>
+  <div class="step-pill" id="step-2">② Aktifkan Snooping</div>
+  <div class="step-pill" id="step-3">③ Set Trusted Port</div>
+  <div class="step-pill" id="step-4">④ Uji Rogue DHCP</div>
+  <div class="step-pill" id="step-5">⑤ Client Request</div>
+</div>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="stat-card"><div class="stat-val sv-teal" id="stat-forwarded">0</div><div class="stat-lbl">Paket Diteruskan</div></div>
+  <div class="stat-card"><div class="stat-val sv-red" id="stat-blocked">0</div><div class="stat-lbl">Paket Diblokir</div></div>
+  <div class="stat-card"><div class="stat-val sv-green" id="stat-clients">0</div><div class="stat-lbl">Client Dapat IP</div></div>
+  <div class="stat-card"><div class="stat-val sv-gold" id="stat-binding">0</div><div class="stat-lbl">Binding Table</div></div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <button class="btn btn-teal" id="btn-normal" onclick="runNormalFlow()">▶ Normal DHCP (Tanpa Snooping)</button>
+  <button class="btn btn-red"  id="btn-rogue"  onclick="runRogueAttack()">⚡ Serangan Rogue DHCP</button>
+  <button class="btn btn-gold" id="btn-snooping" onclick="enableSnooping()">🛡 Aktifkan DHCP Snooping</button>
+  <button class="btn btn-ghost" onclick="resetAll()">↺ Reset</button>
+  <div class="toggle-row">
+    <span class="toggle-label">Show Packets</span>
+    <label class="toggle"><input type="checkbox" id="toggle-packets" checked><span class="toggle-slider"></span></label>
+  </div>
+</div>
+
+<!-- TOPOLOGY -->
+<div class="topology" id="topology" style="height:320px;">
+  <svg id="topo-svg"></svg>
+
+  <!-- DHCP SERVER RESMI -->
+  <div class="topo-node trusted" id="node-legit" style="grid-column:1;grid-row:1;margin:0 8px 0 0;">
+    <span class="node-icon">🖥️</span>
+    <div class="node-label">DHCP Server Resmi</div>
+    <div class="node-sub">192.168.1.1</div>
+    <div class="node-sub">Pool: .10 – .200</div>
+    <span class="node-badge nb-trusted" id="badge-legit">Trusted Port</span>
+  </div>
+
+  <!-- SWITCH -->
+  <div class="topo-switch" id="node-switch">
+    <span class="node-icon">🔀</span>
+    <div class="node-label" style="font-size:13px;">Switch Managed</div>
+    <div class="node-sub" style="margin-top:4px;" id="snooping-status">DHCP Snooping: OFF</div>
+    <span class="node-badge nb-switch" style="margin-top:8px;" id="badge-switch">Unprotected</span>
+  </div>
+
+  <!-- ROGUE DHCP -->
+  <div class="topo-node untrusted" id="node-rogue" style="grid-column:3;grid-row:1;margin:0 0 0 8px;">
+    <span class="node-icon">💀</span>
+    <div class="node-label">Rogue DHCP Server</div>
+    <div class="node-sub">IP Palsu / GW Palsu</div>
+    <div class="node-sub">Pool: 10.0.0.x</div>
+    <span class="node-badge nb-untrusted" id="badge-rogue">Untrusted Port</span>
+  </div>
+
+  <!-- CLIENTS ROW -->
+  <div class="client-row" style="grid-column:1/-1;grid-row:3;">
+    <div class="client-node" id="client-1">
+      <span style="font-size:22px;">💻</span>
+      <div class="node-label" style="font-size:11px;">Client 1</div>
+      <div class="node-sub">Fa0/3 | MAC: AA:BB:11</div>
+      <div class="client-ip ip-none" id="ip-1">— menunggu —</div>
+    </div>
+    <div class="client-node" id="client-2">
+      <span style="font-size:22px;">💻</span>
+      <div class="node-label" style="font-size:11px;">Client 2</div>
+      <div class="node-sub">Fa0/4 | MAC: AA:BB:22</div>
+      <div class="client-ip ip-none" id="ip-2">— menunggu —</div>
+    </div>
+    <div class="client-node" id="client-3">
+      <span style="font-size:22px;">💻</span>
+      <div class="node-label" style="font-size:11px;">Client 3</div>
+      <div class="node-sub">Fa0/5 | MAC: AA:BB:33</div>
+      <div class="client-ip ip-none" id="ip-3">— menunggu —</div>
+    </div>
+  </div>
+</div>
+
+<!-- LOG -->
+<div class="log-panel">
+  <div class="log-header">
+    <span>📋 Switch Log — DHCP Snooping</span>
+    <button class="log-clear" onclick="clearLog()">Hapus log</button>
+  </div>
+  <div class="log-body" id="log-body">
+    <div class="log-line"><span class="log-dim">——</span><span class="log-dim">Simulasi belum dimulai. Klik salah satu tombol di atas.</span></div>
+  </div>
+</div>
+
+<!-- BINDING TABLE -->
+<div class="info-grid">
+  <div class="info-card" style="grid-column:1/-1;">
+    <h3>📊 DHCP Snooping Binding Table</h3>
+    <table class="binding-table" id="binding-table">
+      <thead><tr><th>MAC Address</th><th>IP Address</th><th>Lease</th><th>Type</th><th>VLAN</th><th>Interface</th></tr></thead>
+      <tbody id="binding-body"><tr><td colspan="6" style="color:var(--dim);text-align:center;padding:12px;">Belum ada entri — aktifkan DHCP Snooping dan jalankan simulasi</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="info-grid">
+  <div class="info-card">
+    <h3>✅ Trusted Port</h3>
+    <ul>
+      <li><span>DHCP Offer diizinkan</span> lewat port ini</li>
+      <li>Terhubung ke <span>DHCP server resmi</span></li>
+      <li>Di-set manual: <span>ip dhcp snooping trust</span></li>
+      <li>Biasanya port uplink <span>ke server room</span></li>
+    </ul>
+  </div>
+  <div class="info-card">
+    <h3>🚫 Untrusted Port</h3>
+    <ul>
+      <li><span>DHCP Offer diblokir</span> dari port ini</li>
+      <li>Port ke <span>end device / client</span></li>
+      <li>Default semua port: <span>untrusted</span></li>
+      <li>Rogue DHCP di port ini → <span>langsung diblokir</span></li>
+    </ul>
+  </div>
+</div>
+
+</div><!-- .wrap -->
+
+<script>
+// ── STATE ──────────────────────────────────────
+let snoopingEnabled = false;
+let trusted = false;
+let stats = { forwarded:0, blocked:0, clients:0, binding:0 };
+let bindingEntries = [];
+let animating = false;
+const showPackets = () => document.getElementById('toggle-packets').checked;
+
+// ── LOG ────────────────────────────────────────
+const logBody = document.getElementById('log-body');
+function log(msg, type='info') {
+  const t = new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-time">${t}</span><span class="log-${type}">${msg}</span>`;
+  if (logBody.firstChild?.className === 'log-line' && logBody.firstChild.querySelector('.log-dim')?.textContent.includes('belum')) {
+    logBody.innerHTML = '';
+  }
+  logBody.appendChild(line);
+  logBody.scrollTop = logBody.scrollHeight;
+}
+function clearLog() {
+  logBody.innerHTML = '<div class="log-line"><span class="log-dim">——</span><span class="log-dim">Log dibersihkan.</span></div>';
+}
+
+// ── STATS ──────────────────────────────────────
+function updateStats() {
+  document.getElementById('stat-forwarded').textContent = stats.forwarded;
+  document.getElementById('stat-blocked').textContent   = stats.blocked;
+  document.getElementById('stat-clients').textContent   = stats.clients;
+  document.getElementById('stat-binding').textContent   = stats.binding;
+}
+
+// ── STEPS ──────────────────────────────────────
+function setStep(n) {
+  for(let i=1;i<=5;i++){
+    const el = document.getElementById(`step-${i}`);
+    el.classList.remove('active','done');
+    if(i < n) el.classList.add('done');
+    if(i === n) el.classList.add('active');
+  }
+}
+
+// ── BINDING TABLE ──────────────────────────────
+function addBinding(mac, ip, iface) {
+  const tbody = document.getElementById('binding-body');
+  if(bindingEntries.length === 0) tbody.innerHTML = '';
+  // check duplicate
+  if(bindingEntries.find(e=>e.mac===mac)) return;
+  bindingEntries.push({mac,ip,iface});
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td class="mac">${mac}</td><td class="ip">${ip}</td><td>86400</td><td>dynamic</td><td>10</td><td class="port">${iface}</td>`;
+  tbody.appendChild(tr);
+  stats.binding++;
+  updateStats();
+}
+
+// ── PACKET ANIMATION ───────────────────────────
+function getNodeCenter(el) {
+  const topo = document.getElementById('topology');
+  const tr = topo.getBoundingClientRect();
+  const nr = el.getBoundingClientRect();
+  return {
+    x: nr.left - tr.left + nr.width/2,
+    y: nr.top  - tr.top  + nr.height/2,
+  };
+}
+function animPacket(from, to, label, cls, delay=0) {
+  return new Promise(res => {
+    if (!showPackets()) { setTimeout(res, delay + 400); return; }
+    setTimeout(() => {
+      const topo = document.getElementById('topology');
+      const f = getNodeCenter(from);
+      const t = getNodeCenter(to);
+      const pkt = document.createElement('div');
+      pkt.className = `packet ${cls}`;
+      pkt.textContent = label;
+      pkt.style.left = f.x - 18 + 'px';
+      pkt.style.top  = f.y - 10 + 'px';
+      topo.appendChild(pkt);
+      requestAnimationFrame(() => {
+        pkt.style.opacity = '1';
+        pkt.style.transition = 'left .6s ease, top .6s ease, opacity .2s';
+        requestAnimationFrame(() => {
+          pkt.style.left = t.x - 18 + 'px';
+          pkt.style.top  = t.y - 10 + 'px';
+        });
+      });
+      setTimeout(() => {
+        pkt.style.opacity = '0';
+        setTimeout(() => { pkt.remove(); res(); }, 200);
+      }, 700);
+    }, delay);
+  });
+}
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+// ── NODES ──────────────────────────────────────
+const nLegit  = () => document.getElementById('node-legit');
+const nRogue  = () => document.getElementById('node-rogue');
+const nSwitch = () => document.getElementById('node-switch');
+const nClient = i  => document.getElementById(`client-${i}`);
+
+function setIP(i, ip, good) {
+  const el = document.getElementById(`ip-${i}`);
+  el.textContent = ip;
+  el.className = `client-ip ${good?'ip-good':'ip-bad'}`;
+  const c = nClient(i);
+  c.classList.remove('got-ip-good','got-ip-bad','waiting');
+  c.classList.add(good?'got-ip-good':'got-ip-bad');
+}
+
+// ── SCENARIO 1: Normal (no snooping) ──────────
+async function runNormalFlow() {
+  if (animating) return;
+  animating = true;
+  setStep(1);
+  log('=== Skenario: DHCP Normal (DHCP Snooping OFF) ===', 'warn');
+  log('DHCP Snooping belum aktif — switch tidak membedakan server mana yang resmi', 'dim');
+
+  const clients = [
+    {id:1, mac:'AA:BB:11', ip:'192.168.1.10', iface:'Fa0/3'},
+    {id:2, mac:'AA:BB:22', ip:'192.168.1.11', iface:'Fa0/4'},
+    {id:3, mac:'AA:BB:33', ip:'192.168.1.12', iface:'Fa0/5'},
+  ];
+
+  for (const c of clients) {
+    nClient(c.id).classList.add('waiting');
+    log(`Client ${c.id} (${c.mac}) → DHCP Discover (broadcast)`, 'info');
+    await animPacket(nClient(c.id), nSwitch(), 'DISC', 'pkt-discover');
+    await sleep(200);
+    log(`Switch meneruskan Discover ke SEMUA port (broadcast) — termasuk ke rogue server`, 'warn');
+    await animPacket(nSwitch(), nLegit(), 'DISC', 'pkt-discover');
+    log(`DHCP Server Resmi → DHCP Offer: ${c.ip}`, 'ok');
+    await animPacket(nLegit(), nSwitch(), 'OFFER', 'pkt-offer');
+    await animPacket(nSwitch(), nClient(c.id), 'OFFER', 'pkt-good');
+    setIP(c.id, c.ip, true);
+    if (!snoopingEnabled) addBinding(c.mac, c.ip, c.iface);
+    stats.forwarded++;
+    stats.clients++;
+    updateStats();
+    await sleep(300);
+  }
+  log('✅ Semua client mendapat IP dari server resmi (karena rogue server tidak menjawab lebih cepat)', 'ok');
+  log('⚠️  Tanpa Snooping: jika ada rogue DHCP server yang lebih cepat, client bisa tertipu!', 'warn');
+  setStep(2);
+  animating = false;
+}
+
+// ── SCENARIO 2: Rogue Attack ───────────────────
+async function runRogueAttack() {
+  if (animating) return;
+  animating = true;
+  log('=== Skenario: Serangan Rogue DHCP Server ===', 'err');
+
+  if (snoopingEnabled && trusted) {
+    // DHCP Snooping aktif → blokir
+    log('🛡 DHCP Snooping AKTIF — Switch memeriksa semua DHCP Offer', 'ok');
+    await sleep(400);
+
+    for (let i = 1; i <= 3; i++) {
+      nClient(i).classList.add('waiting');
+      log(`Client ${i} → DHCP Discover`, 'info');
+      await animPacket(nClient(i), nSwitch(), 'DISC', 'pkt-discover');
+      await sleep(150);
+
+      // Rogue mencoba menjawab
+      log(`Rogue DHCP Server → DHCP Offer (IP palsu: 10.0.0.${i}) — dari UNTRUSTED port`, 'err');
+      await animPacket(nRogue(), nSwitch(), 'OFFER', 'pkt-blocked');
+      log(`🚫 SWITCH MEMBLOKIR — Paket dari untrusted port Fa0/5 ditolak!`, 'err');
+      nRogue().classList.add('attacked');
+      stats.blocked++;
+      updateStats();
+      await sleep(300);
+      nRogue().classList.remove('attacked');
+
+      // Legit menjawab
+      const ip = `192.168.1.${10+i-1}`;
+      log(`DHCP Server Resmi → DHCP Offer: ${ip} — dari TRUSTED port ✓`, 'ok');
+      await animPacket(nLegit(), nSwitch(), 'OFFER', 'pkt-offer');
+      await animPacket(nSwitch(), nClient(i), 'OFFER', 'pkt-good');
+      setIP(i, ip, true);
+      const macs = ['AA:BB:11','AA:BB:22','AA:BB:33'];
+      const ifaces = ['Fa0/3','Fa0/4','Fa0/5'];
+      addBinding(macs[i-1], ip, ifaces[i-1]);
+      stats.forwarded++;
+      stats.clients++;
+      updateStats();
+      await sleep(300);
+    }
+    log('✅ Semua serangan Rogue DHCP berhasil diblokir! Client mendapat IP valid dari server resmi.', 'ok');
+    setStep(5);
+  } else {
+    // Tanpa Snooping → berhasil diserang
+    log('⚠️  DHCP Snooping belum aktif — Rogue DHCP bisa menjawab lebih cepat!', 'warn');
+    await sleep(400);
+
+    for (let i = 1; i <= 3; i++) {
+      nClient(i).classList.add('waiting');
+      log(`Client ${i} → DHCP Discover (broadcast)`, 'info');
+      await animPacket(nClient(i), nSwitch(), 'DISC', 'pkt-discover');
+      await sleep(150);
+
+      // Rogue lebih cepat
+      const fakeIP = `10.0.0.${i}`;
+      log(`Rogue DHCP Server → DHCP Offer LEBIH CEPAT! IP palsu: ${fakeIP}, GW: 10.0.0.254`, 'err');
+      nRogue().classList.add('attacked');
+      await animPacket(nRogue(), nSwitch(), 'OFFER', 'pkt-blocked');
+      await animPacket(nSwitch(), nClient(i), 'OFFER', 'pkt-blocked');
+      setIP(i, `${fakeIP} ⚠️`, false);
+      stats.forwarded++;
+      stats.clients++;
+      updateStats();
+      await sleep(200);
+      nRogue().classList.remove('attacked');
+
+      log(`💀 Client ${i} mendapat IP PALSU ${fakeIP}! Gateway palsu → semua traffic melewati penyerang (MITM)`, 'err');
+      await sleep(300);
+    }
+    log('💀 SERANGAN BERHASIL! Semua client mendapat IP dari Rogue DHCP → Man-in-the-Middle aktif!', 'err');
+    log('→ Solusi: Aktifkan DHCP Snooping dan set Trusted Port ke DHCP server resmi', 'warn');
+    setStep(4);
+  }
+  animating = false;
+}
+
+// ── ENABLE SNOOPING ────────────────────────────
+async function enableSnooping() {
+  if (animating) return;
+  snoopingEnabled = true;
+  trusted = true;
+  animating = true;
+
+  log('=== Mengaktifkan DHCP Snooping ===', 'info');
+  await sleep(200);
+  log('Switch(config)# ip dhcp snooping', 'ok');
+  await sleep(300);
+  log('Switch(config)# ip dhcp snooping vlan 10', 'ok');
+  await sleep(300);
+  log('Switch(config)# no ip dhcp snooping information option', 'ok');
+  await sleep(300);
+  log('Switch(config)# interface GigabitEthernet0/1', 'ok');
+  await sleep(200);
+  log('Switch(config-if)# ip dhcp snooping trust  ← port ke DHCP server resmi', 'ok');
+  await sleep(400);
+
+  // Update UI
+  document.getElementById('snooping-status').textContent = 'DHCP Snooping: ON';
+  document.getElementById('badge-switch').textContent = 'Protected';
+  document.getElementById('badge-switch').className = 'node-badge nb-trusted';
+  nSwitch().classList.add('snooping-active');
+
+  log('✅ DHCP Snooping aktif! Semua DHCP Offer dari Untrusted port akan diblokir.', 'ok');
+  log('→ Coba klik "Serangan Rogue DHCP" untuk melihat DHCP Snooping bekerja!', 'warn');
+
+  document.getElementById('btn-snooping').disabled = true;
+  document.getElementById('btn-snooping').textContent = '🛡 Snooping Aktif';
+  setStep(3);
+  animating = false;
+}
+
+// ── RESET ──────────────────────────────────────
+function resetAll() {
+  snoopingEnabled = false;
+  trusted = false;
+  animating = false;
+  stats = {forwarded:0,blocked:0,clients:0,binding:0};
+  bindingEntries = [];
+  updateStats();
+  setStep(1);
+
+  for(let i=1;i<=3;i++){
+    const c = nClient(i);
+    c.classList.remove('got-ip-good','got-ip-bad','waiting');
+    const ip = document.getElementById(`ip-${i}`);
+    ip.textContent = '— menunggu —';
+    ip.className = 'client-ip ip-none';
+  }
+
+  nSwitch().classList.remove('snooping-active');
+  document.getElementById('snooping-status').textContent = 'DHCP Snooping: OFF';
+  document.getElementById('badge-switch').textContent = 'Unprotected';
+  document.getElementById('badge-switch').className = 'node-badge nb-switch';
+  nRogue().classList.remove('attacked');
+
+  document.getElementById('btn-snooping').disabled = false;
+  document.getElementById('btn-snooping').textContent = '🛡 Aktifkan DHCP Snooping';
+
+  document.getElementById('binding-body').innerHTML =
+    '<tr><td colspan="6" style="color:var(--dim);text-align:center;padding:12px;">Belum ada entri — aktifkan DHCP Snooping dan jalankan simulasi</td></tr>';
+
+  clearLog();
+  log('Simulasi direset. Mulai dari awal.', 'dim');
+}
+
+// init
+updateStats();
+</script>
+</body>
+</html>
